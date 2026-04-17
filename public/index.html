@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<title>Form Reader — The Davis Financial Group</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#064789">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Form Reader">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #064789;
+    --navy-dark: #053a70;
+    --navy-light: #e8eef5;
+    --olive: #82a055;
+    --olive-dark: #6f8c47;
+    --olive-light: #e8f0dd;
+    --ink: #1a2a3a;
+    --ink-soft: #4a5568;
+    --ink-muted: #7a8699;
+    --ink-subtle: #a3abbb;
+    --rule: #e3e7eb;
+    --rule-soft: #eef1f4;
+    --paper: #fdfcf8;
+    --page: #f4f6f9;
+    --card: #ffffff;
+    --amber: #c88a1c;
+    --amber-bg: #fdf4e0;
+    --red: #b84032;
+    --red-bg: #fbe9e5;
+    --green: #4a8c4e;
+    --shadow: 0 2px 12px rgba(6, 71, 137, 0.06);
+    --shadow-lg: 0 8px 28px rgba(6, 71, 137, 0.10);
+    --radius: 8px;
+    --radius-sm: 4px;
+  }
+
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; color: var(--navy); letter-spacing: -0.01em; }
+
+  /* ── Header ────────────────────────────────────────────── */
+  .header {
+    background: var(--card);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-logo {
+    width: 36px; height: 36px;
+    background: var(--navy);
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .header-title { font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .header-subtitle { font-size: 12px; color: var(--ink-muted); font-style: italic; font-family: Georgia, serif; }
+
+  /* ── Main layout ───────────────────────────────────────── */
+  main { max-width: 720px; margin: 0 auto; padding: 24px 20px 100px; }
+
+  .step { display: none; }
+  .step.active { display: block; }
+
+  /* ── Step 1: Upload ──────────────────────────────────── */
+  .hero { text-align: center; padding: 12px 0 24px; }
+  .hero h1 { font-size: 32px; font-weight: 500; margin-bottom: 8px; line-height: 1.15; }
+  .hero p { color: var(--ink-soft); font-size: 15px; max-width: 44ch; margin: 0 auto; }
+
+  .drop-zone {
+    border: 2px dashed var(--rule);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 24px;
+    position: relative;
+  }
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: var(--navy);
+    background: var(--navy-light);
+  }
+  .drop-zone-icon {
+    font-size: 44px;
+    line-height: 1;
+    margin-bottom: 14px;
+    opacity: 0.4;
+  }
+  .drop-zone-title {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    color: var(--navy);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .drop-zone-hint {
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font: inherit;
+    padding: 11px 20px;
+    background: var(--card);
+    color: var(--navy);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:hover { border-color: var(--navy); background: var(--navy-light); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--navy);
+    color: white;
+    border-color: var(--navy);
+  }
+  .btn-primary:hover { background: var(--navy-dark); border-color: var(--navy-dark); }
+
+  .btn-lg { padding: 14px 28px; font-size: 15px; }
+
+  input[type="file"] { display: none; }
+
+  .mode-hint {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .mode-hint a {
+    color: var(--olive-dark);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--olive-dark);
+    cursor: pointer;
+  }
+  .mode-hint a:hover { color: var(--navy); border-bottom-color: var(--navy); }
+
+  .mode-banner {
+    background: var(--olive-light);
+    border-left: 3px solid var(--olive);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 18px;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .mode-banner.active { display: flex; }
+  .mode-banner strong { color: var(--olive-dark); font-weight: 600; }
+  .mode-banner a { color: var(--navy); text-decoration: underline; font-size: 12px; }
+
+  /* ── Thumbnail strip ─────────────────────────────────── */
+  .files-strip {
+    margin-top: 20px;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: none;
+  }
+  .files-strip.active { display: block; }
+  .files-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .files-label a { color: var(--navy); font-size: 12px; text-transform: none; letter-spacing: 0; cursor: pointer; }
+  .files-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+  }
+  .file-tile {
+    aspect-ratio: 3 / 4;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    background: var(--page);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .file-tile img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .file-tile .pdf-tile {
+    font-size: 10px;
+    text-align: center;
+    padding: 8px;
+    color: var(--ink-soft);
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .file-tile .pdf-tile .ext {
+    display: block;
+    font-family: Georgia, serif;
+    font-size: 20px;
+    color: var(--navy);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .file-tile .remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .file-tile .remove:hover { background: rgba(0, 0, 0, 0.8); }
+  .file-tile .idx {
+    position: absolute;
+    bottom: 4px; left: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 3px;
+  }
+
+  .process-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ── Processing overlay ────────────────────────────────── */
+  .processing {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    margin-top: 20px;
+    display: none;
+  }
+  .processing.active { display: block; }
+  .processing .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid var(--rule);
+    border-top-color: var(--navy);
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .processing-msg { color: var(--ink-soft); font-size: 14px; }
+  .processing-sub { color: var(--ink-muted); font-size: 12px; margin-top: 8px; }
+
+  /* ── Step 2: Result (Davis mode — side by side) ────────── */
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .result-header h2 {
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .result-header .meta {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-family: Georgia, serif;
+    font-style: italic;
+  }
+
+  .flags-bar {
+    background: var(--amber-bg);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+  }
+  .flags-bar .flag-title { font-weight: 600; color: var(--amber); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    min-height: 500px;
+  }
+  @media (max-width: 700px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+  .compare-panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 75vh;
+  }
+  .compare-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    background: var(--rule-soft);
+  }
+  .compare-body { overflow-y: auto; flex: 1; }
+  .compare-images { padding: 12px; }
+  .compare-images img {
+    width: 100%;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .compare-images img.zoomed { width: auto; max-width: none; cursor: zoom-out; }
+
+  .fields-panel { padding: 14px; }
+  .section-heading {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 18px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 600;
+  }
+  .section-heading:first-child { margin-top: 0; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 40% 1fr auto;
+    gap: 10px;
+    padding: 6px 10px;
+    margin: 2px -10px;
+    align-items: baseline;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--green);
+  }
+  .field-row.conf-amber { background: var(--amber-bg); border-left-color: var(--amber); }
+  .field-row.conf-red { background: var(--red-bg); border-left-color: var(--red); animation: pulse-red 2s ease-in-out infinite; }
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(184, 64, 50, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(184, 64, 50, 0.15); }
+  }
+  .field-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .field-value {
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    word-break: break-word;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+  .field-value:hover { background: rgba(6, 71, 137, 0.06); }
+  .field-value.editing {
+    outline: 2px solid var(--navy);
+    background: white;
+    cursor: text;
+  }
+  .field-value.empty { color: var(--ink-subtle); font-style: italic; }
+  .conf-badge {
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .edit-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--navy);
+    border-radius: 50%;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── General mode result view ────────────────────────── */
+  .general-result {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .general-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .general-meta dt { color: var(--ink-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+  .general-meta dd { color: var(--ink); }
+  .general-content {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink);
+    white-space: pre-wrap;
+  }
+  .general-content h1, .general-content h2, .general-content h3 {
+    margin-top: 20px; margin-bottom: 8px;
+    font-family: Georgia, serif;
+  }
+  .key-facts {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  .key-facts-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); margin-bottom: 10px; }
+  .key-facts-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    font-size: 13px;
+  }
+  .key-facts-list dt { font-weight: 500; color: var(--ink-soft); }
+  .key-facts-list dd { color: var(--ink); }
+
+  /* ── Export bar ────────────────────────────────────── */
+  .export-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--card);
+    border-top: 1px solid var(--rule);
+    padding: 12px 20px;
+    margin: 24px -20px -100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+  }
+  .export-left {
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .export-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .export-actions .btn { padding: 8px 14px; font-size: 13px; }
+
+  /* ── Toast ────────────────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Error ───────────────────────────────────────────── */
+  .error-card {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink);
+    display: none;
+  }
+  .error-card.active { display: block; }
+  .error-card strong { color: var(--red); display: block; margin-bottom: 4px; }
+
+  /* ── Footer ────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-muted);
+    padding: 30px 0 40px;
+  }
+  .footer a { color: var(--ink-muted); text-decoration: none; border-bottom: 1px dotted currentColor; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="header-logo">D</span>
+  <div>
+    <div class="header-title">Form Reader</div>
+    <div class="header-subtitle">The Davis Financial Group</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Step 1: Upload ───────────────────────────────── -->
+  <section class="step active" id="step-upload">
+    <div class="hero">
+      <h1>Upload a form</h1>
+      <p>Scan with your phone's Notes app, Files, or any scanner. Drop it here and we'll read it.</p>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-zone-icon">📄</div>
+      <div class="drop-zone-title">Drop files here or tap to choose</div>
+      <div class="drop-zone-hint">Images, PDFs — any combination, any number</div>
+    </div>
+
+    <div class="input-row">
+      <button class="btn" id="btn-camera">
+        📸 Take photo
+      </button>
+      <button class="btn" id="btn-paste" title="Paste from clipboard (Ctrl+V)">
+        📋 Paste
+      </button>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*,application/pdf" multiple>
+    <input type="file" id="camera-input" accept="image/*" capture="environment">
+
+    <div class="mode-hint">
+      Scanning a Davis Financial form · <a id="mode-switch">have something else?</a>
+    </div>
+
+    <div class="mode-banner" id="mode-banner">
+      <span>Mode: <strong>Digitize anything</strong> — note, receipt, letter, any document</span>
+      <a id="mode-back">back to Davis form</a>
+    </div>
+
+    <div class="files-strip" id="files-strip">
+      <div class="files-label">
+        <span id="files-count">0 files</span>
+        <a id="clear-files">Clear all</a>
+      </div>
+      <div class="files-list" id="files-list"></div>
+      <div class="process-row">
+        <div style="font-size:12px;color:var(--ink-muted);">Ready to read</div>
+        <button class="btn btn-primary btn-lg" id="btn-process">Read forms →</button>
+      </div>
+    </div>
+
+    <div class="processing" id="processing">
+      <div class="spinner"></div>
+      <div class="processing-msg" id="processing-msg">Reading your forms…</div>
+      <div class="processing-sub" id="processing-sub">This usually takes 5 to 10 seconds</div>
+    </div>
+
+    <div class="error-card" id="error-card">
+      <strong>Something went wrong</strong>
+      <span id="error-msg"></span>
+    </div>
+
+    <div class="footer">
+      Files stay in your browser. We send them for AI processing, then they're discarded.<br>
+      No history. No saved uploads. <a href="https://github.com/UBIpromoter/form-reader" target="_blank">Source on GitHub</a>.
+    </div>
+  </section>
+
+  <!-- ── Step 2: Result ────────────────────────────────── -->
+  <section class="step" id="step-result">
+
+    <div class="result-header">
+      <h2 id="result-title">Extracted data</h2>
+      <span class="meta" id="result-meta"></span>
+    </div>
+
+    <div id="flags-bar"></div>
+
+    <!-- Davis mode result -->
+    <div id="davis-result">
+      <div class="compare">
+        <div class="compare-panel">
+          <div class="compare-header">Original pages</div>
+          <div class="compare-body compare-images" id="compare-images"></div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-header">Extracted</div>
+          <div class="compare-body fields-panel" id="fields-panel"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- General mode result -->
+    <div id="general-result" class="general-result" style="display:none;"></div>
+
+    <div class="export-bar">
+      <div class="export-left" id="export-stats"></div>
+      <div class="export-actions">
+        <button class="btn" id="btn-back">↶ Back</button>
+        <button class="btn" id="btn-copy">Copy</button>
+        <button class="btn" id="btn-email">Email</button>
+        <button class="btn btn-primary" id="btn-download">Download JSON</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Configuration ────────────────────────────────────────────────────────
+const DAVIS_FIELDS = {
+  // Quick Start
+  first_name:       { label: 'First name', section: 'About you' },
+  last_name:        { label: 'Last name', section: 'About you' },
+  dob:              { label: 'Date of birth', section: 'About you' },
+  email:            { label: 'Email', section: 'About you' },
+  phone:            { label: 'Phone', section: 'About you' },
+  has_spouse:       { label: 'Spouse or partner?', section: 'About you', type: 'yesno' },
+  spouse_first:     { label: 'Spouse/partner first name', section: 'About you' },
+  spouse_last:      { label: 'Spouse/partner last name', section: 'About you' },
+  spouse_dob:       { label: 'Spouse/partner DOB', section: 'About you' },
+  has_children:     { label: 'Children?', section: 'About you', type: 'yesno' },
+  children:         { label: 'Children (names & ages)', section: 'About you', type: 'children' },
+  other_dependents: { label: 'Other dependents', section: 'About you' },
+
+  occupation:         { label: 'Your occupation', section: 'Quick picture' },
+  spouse_occupation:  { label: 'Spouse occupation', section: 'Quick picture' },
+  income_range:       { label: 'Household income', section: 'Quick picture', type: 'select' },
+  net_worth_range:    { label: 'Rough net worth', section: 'Quick picture', type: 'select' },
+  investable_thoughts:{ label: 'Looking for help managing', section: 'Quick picture' },
+  existing_advisor:   { label: 'Current financial advisor?', section: 'Quick picture', type: 'select' },
+
+  why_now:         { label: "What's prompting this?", section: 'What brings you here' },
+  catalyst:        { label: "What's on your mind?", section: 'What brings you here' },
+  referral_source: { label: 'How did you find us?', section: 'What brings you here' },
+
+  // Financial Sketch
+  income_primary:  { label: 'Your gross annual income', section: 'Income' },
+  income_spouse:   { label: 'Spouse/partner income', section: 'Income' },
+  income_other:    { label: 'Other income', section: 'Income' },
+  has_pension:     { label: 'Pension?', section: 'Income', type: 'select' },
+  pension_detail:  { label: 'Pension detail', section: 'Income' },
+  social_security: { label: 'Social Security', section: 'Income', type: 'select' },
+  future_inflows:  { label: 'Future money expected', section: 'Income' },
+
+  cash_flow_direction: { label: 'Currently…', section: 'Cash flow', type: 'select' },
+  cash_flow_amount:    { label: 'By how much/month', section: 'Cash flow' },
+  monthly_need:        { label: 'Total monthly expenses', section: 'Cash flow' },
+  big_expenses:        { label: 'Major upcoming expenses', section: 'Cash flow' },
+
+  housing:              { label: 'Primary residence', section: 'Assets', type: 'select' },
+  home_value:           { label: 'Home value', section: 'Assets' },
+  mortgage_balance:     { label: 'Mortgage balance', section: 'Assets' },
+  mortgage_payment:     { label: 'Monthly payment', section: 'Assets' },
+  has_other_property:   { label: 'Other real estate?', section: 'Assets', type: 'yesno' },
+  other_property_type:  { label: 'Other property type', section: 'Assets' },
+  other_property_value: { label: 'Other property value', section: 'Assets' },
+  other_property_mortgage: { label: 'Other property mortgage', section: 'Assets' },
+  housing_plans:        { label: 'Housing plans 5-10yrs', section: 'Assets' },
+  bank_total:           { label: 'Bank accounts', section: 'Assets' },
+  retirement_total:     { label: 'Retirement accounts', section: 'Assets' },
+  taxable_total:        { label: 'Taxable investments', section: 'Assets' },
+  crypto_total:         { label: 'Crypto', section: 'Assets' },
+  accounts_notes:       { label: 'Account notes', section: 'Assets' },
+  has_stock_options:    { label: 'Equity comp?', section: 'Assets', type: 'yesno' },
+  stock_options_detail: { label: 'Equity detail', section: 'Assets' },
+  has_other_assets:     { label: 'Other significant assets?', section: 'Assets', type: 'yesno' },
+  other_assets:         { label: 'Other assets', section: 'Assets' },
+  wealth_arc:           { label: 'How you got here', section: 'Assets', type: 'select' },
+  wealth_comfort:       { label: 'How you feel about it', section: 'Assets' },
+
+  paying_for_college:  { label: 'Planning to help with college?', section: 'Education', type: 'select' },
+  has_529:             { label: '529 or college savings?', section: 'Education', type: 'yesno' },
+  college_savings_total: { label: 'College savings total', section: 'Education' },
+  college_feeling:     { label: 'Feeling about college funding', section: 'Education' },
+
+  has_auto_loan:     { label: 'Car loan', section: 'Debts', type: 'bool' },
+  auto_bal:          { label: 'Car loan balance', section: 'Debts' },
+  has_student_loan:  { label: 'Student loans', section: 'Debts', type: 'bool' },
+  student_bal:       { label: 'Student loan balance', section: 'Debts' },
+  has_personal_debt: { label: 'Personal/business debt', section: 'Debts', type: 'bool' },
+  personal_bal:      { label: 'Personal debt balance', section: 'Debts' },
+  has_credit_cards:  { label: 'Credit cards carried', section: 'Debts', type: 'bool' },
+  cc_bal:            { label: 'Credit card balance', section: 'Debts' },
+
+  life_insurance_has:    { label: 'Life insurance', section: 'Safety net', type: 'yesno' },
+  life_insurance_amount: { label: 'Life coverage', section: 'Safety net' },
+  disability_has:        { label: 'Disability insurance', section: 'Safety net', type: 'yesno' },
+  disability_amount:     { label: 'Disability amount', section: 'Safety net' },
+  ltc_has:               { label: 'Long-term care', section: 'Safety net', type: 'yesno' },
+  ltc_amount:            { label: 'LTC amount', section: 'Safety net' },
+  protection_feel:       { label: 'Protection level', section: 'Safety net', type: 'select' },
+
+  has_will:         { label: 'Will or trust?', section: 'Estate', type: 'select' },
+  will_updated:     { label: 'Will last updated', section: 'Estate' },
+  has_poa:          { label: 'Power of attorney?', section: 'Estate', type: 'select' },
+  has_hcp:          { label: 'Health care proxy?', section: 'Estate', type: 'select' },
+  estate_organized: { label: 'Estate organized?', section: 'Estate', type: 'select' },
+  family_money_dynamics: { label: 'Family money dynamics', section: 'Estate' },
+
+  matters_most:       { label: 'What matters most', section: 'Values & plans' },
+  values_investing:   { label: 'Values-based investing', section: 'Values & plans', type: 'select' },
+  values_detail:      { label: 'Values detail', section: 'Values & plans' },
+  charitable:         { label: 'Charitable giving', section: 'Values & plans', type: 'select' },
+  charitable_detail:  { label: 'Causes', section: 'Values & plans' },
+  retire_when:        { label: 'When to retire', section: 'Values & plans' },
+  retire_vision:      { label: 'Retirement vision', section: 'Values & plans' },
+  involvement:        { label: 'How involved', section: 'Values & plans', type: 'select' },
+
+  tax_advisor:       { label: 'Tax advisor', section: 'Professionals' },
+  estate_attorney:   { label: 'Estate attorney', section: 'Professionals' },
+  tax_satisfaction:  { label: 'Tax handling', section: 'Professionals', type: 'select' },
+
+  // What to Bring
+  vault_tax:           { label: 'Tax Returns', section: 'Documents to bring', type: 'bool' },
+  vault_investments:   { label: 'Investment Statements', section: 'Documents to bring', type: 'bool' },
+  vault_insurance:     { label: 'Insurance Policies', section: 'Documents to bring', type: 'bool' },
+  vault_estate:        { label: 'Estate Documents', section: 'Documents to bring', type: 'bool' },
+  vault_benefits:      { label: 'Employee Benefits', section: 'Documents to bring', type: 'bool' },
+  vault_equity:        { label: 'Equity Compensation', section: 'Documents to bring', type: 'bool' },
+  vault_debt:          { label: 'Mortgage & Loans', section: 'Documents to bring', type: 'bool' },
+  vault_ssn_statement: { label: 'SS Statement', section: 'Documents to bring', type: 'bool' }
+};
+
+const SELECT_LABELS = {
+  income_range: { 'under-100k': 'Under $100K', '100k-250k': '$100K–$250K', '250k-500k': '$250K–$500K', 'over-500k': 'Over $500K' },
+  net_worth_range: { 'under-500k': 'Under $500K', '500k-2m': '$500K–$2M', '2m-10m': '$2M–$10M', 'over-10m': 'Over $10M' },
+  existing_advisor: { 'yes': 'Yes', 'no': 'No', 'previously': 'In the past' },
+  has_pension: { 'yes': 'Yes', 'no': 'No', 'unsure': 'Not sure' },
+  social_security: { 'taking': 'Taking it', 'soon': 'Taking soon', 'wait': 'Waiting until 70', 'far-off': 'Not yet' },
+  cash_flow_direction: { 'saving': 'Saving regularly', 'breaking-even': 'About breaking even', 'drawing-down': 'Drawing down' },
+  housing: { 'own': 'Own', 'rent': 'Rent' },
+  wealth_arc: { 'steady': 'Built up steadily', 'recent': 'Changed a lot recently', 'mix': 'A bit of both' },
+  paying_for_college: { 'yes-full': 'Yes, fully', 'yes-partial': 'Yes, partially', 'no': 'No', 'unsure': 'Not sure yet' },
+  protection_feel: { 'well-covered': 'Well covered', 'some-gaps': 'Some gaps', 'unsure': 'Unsure', 'concerned': 'Concerned' },
+  has_will: { 'yes': 'Yes', 'no': 'No', 'unsure': 'Not sure' },
+  has_poa: { 'yes': 'Yes', 'no': 'No', 'unsure': 'Not sure' },
+  has_hcp: { 'yes': 'Yes', 'no': 'No', 'unsure': 'Not sure' },
+  estate_organized: { 'yes': 'Yes', 'somewhat': 'Somewhat', 'no': 'No, this is a concern' },
+  values_investing: { 'important': 'Important to me', 'somewhat': 'Somewhat', 'not-priority': 'Not a priority' },
+  charitable: { 'active': 'Give regularly', 'some': 'Occasionally', 'interested': 'Want to explore', 'not-now': 'Not right now' },
+  involvement: { 'hands-on': 'Hands-on', 'guided': 'Guided', 'hands-off': 'Hands-off' },
+  tax_satisfaction: { 'great': 'All set', 'okay': 'Could be better', 'help': 'Need help' }
+};
+
+// ── State ────────────────────────────────────────────────────────────────
+let files = [];            // [{ file, thumbUrl, id }]
+let mode = 'davis';        // 'davis' or 'general'
+let extractionResult = null;
+let editedFields = new Set();
+
+// ── DOM refs ─────────────────────────────────────────────────────────────
+const stepUpload = document.getElementById('step-upload');
+const stepResult = document.getElementById('step-result');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const cameraInput = document.getElementById('camera-input');
+const btnCamera = document.getElementById('btn-camera');
+const btnPaste = document.getElementById('btn-paste');
+const filesStrip = document.getElementById('files-strip');
+const filesList = document.getElementById('files-list');
+const filesCount = document.getElementById('files-count');
+const btnProcess = document.getElementById('btn-process');
+const clearFiles = document.getElementById('clear-files');
+const processing = document.getElementById('processing');
+const processingMsg = document.getElementById('processing-msg');
+const errorCard = document.getElementById('error-card');
+const errorMsg = document.getElementById('error-msg');
+const modeSwitch = document.getElementById('mode-switch');
+const modeBack = document.getElementById('mode-back');
+const modeBanner = document.getElementById('mode-banner');
+const toast = document.getElementById('toast');
+
+// ── Navigation ────────────────────────────────────────────────────────────
+function showStep(step) {
+  stepUpload.classList.toggle('active', step === 'upload');
+  stepResult.classList.toggle('active', step === 'result');
+  window.scrollTo(0, 0);
+}
+
+function setMode(newMode) {
+  mode = newMode;
+  modeBanner.classList.toggle('active', mode === 'general');
+  // Update header visually if needed
+}
+
+// ── File handling ────────────────────────────────────────────────────────
+function addFile(file) {
+  if (files.length >= 10) {
+    showToast('Maximum 10 files');
+    return;
+  }
+  if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+    showToast(`Skipped: ${file.name || 'file'} (not an image or PDF)`);
+    return;
+  }
+
+  const id = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const thumbUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+  files.push({ file, thumbUrl, id });
+  renderFiles();
+  hideError();
+}
+
+function removeFile(id) {
+  const idx = files.findIndex(f => f.id === id);
+  if (idx === -1) return;
+  if (files[idx].thumbUrl) URL.revokeObjectURL(files[idx].thumbUrl);
+  files.splice(idx, 1);
+  renderFiles();
+}
+
+function clearAllFiles() {
+  files.forEach(f => f.thumbUrl && URL.revokeObjectURL(f.thumbUrl));
+  files = [];
+  renderFiles();
+}
+
+function renderFiles() {
+  if (files.length === 0) {
+    filesStrip.classList.remove('active');
+    return;
+  }
+  filesStrip.classList.add('active');
+  filesCount.textContent = `${files.length} ${files.length === 1 ? 'file' : 'files'}`;
+
+  filesList.innerHTML = files.map((f, i) => {
+    const inner = f.thumbUrl
+      ? `<img src="${f.thumbUrl}" alt="">`
+      : `<div class="pdf-tile"><span class="ext">PDF</span>${escapeHtml(f.file.name || '')}</div>`;
+    return `
+      <div class="file-tile" data-id="${f.id}">
+        ${inner}
+        <button class="remove" data-id="${f.id}" title="Remove">✕</button>
+        <span class="idx">${i + 1}</span>
+      </div>`;
+  }).join('');
+
+  filesList.querySelectorAll('.remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      removeFile(btn.dataset.id);
+    });
+  });
+}
+
+// ── Input handlers ────────────────────────────────────────────────────────
+fileInput.addEventListener('change', e => {
+  [...e.target.files].forEach(addFile);
+  e.target.value = '';
+});
+
+cameraInput.addEventListener('change', e => {
+  [...e.target.files].forEach(addFile);
+  e.target.value = '';
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  [...e.dataTransfer.files].forEach(addFile);
+});
+
+btnCamera.addEventListener('click', () => cameraInput.click());
+
+btnPaste.addEventListener('click', async () => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.read) {
+      const items = await navigator.clipboard.read();
+      let added = 0;
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type);
+            const file = new File([blob], `pasted-${Date.now()}.${type.split('/')[1]}`, { type });
+            addFile(file);
+            added++;
+          }
+        }
+      }
+      if (added === 0) showToast('No image in clipboard');
+    } else {
+      showToast('Paste not supported in this browser — try drag & drop');
+    }
+  } catch (err) {
+    showToast('Clipboard access denied');
+  }
+});
+
+// Global paste listener (Ctrl+V / Cmd+V)
+document.addEventListener('paste', e => {
+  if (stepUpload.classList.contains('active')) {
+    const items = [...(e.clipboardData?.items || [])];
+    items.forEach(item => {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) addFile(file);
+      }
+    });
+  }
+});
+
+clearFiles.addEventListener('click', clearAllFiles);
+
+// ── Mode switching ───────────────────────────────────────────────────────
+modeSwitch.addEventListener('click', () => setMode('general'));
+modeBack.addEventListener('click', () => setMode('davis'));
+
+// ── Process ──────────────────────────────────────────────────────────────
+btnProcess.addEventListener('click', async () => {
+  if (files.length === 0) return;
+
+  btnProcess.disabled = true;
+  filesStrip.style.display = 'none';
+  processing.classList.add('active');
+  processingMsg.textContent = mode === 'davis' ? 'Reading your forms…' : 'Digitizing…';
+  hideError();
+
+  try {
+    const formData = new FormData();
+    formData.append('mode', mode);
+    files.forEach(f => formData.append('files', f.file, f.file.name || 'upload'));
+
+    const response = await fetch('/extract', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: `Server ${response.status}` }));
+      throw new Error(err.error || `Server error (${response.status})`);
+    }
+
+    extractionResult = await response.json();
+    showResult();
+  } catch (err) {
+    processing.classList.remove('active');
+    filesStrip.style.display = 'block';
+    showError(err.message || 'Something went wrong');
+  } finally {
+    btnProcess.disabled = false;
+  }
+});
+
+// ── Show result ──────────────────────────────────────────────────────────
+function showResult() {
+  processing.classList.remove('active');
+  showStep('result');
+
+  // Header
+  const docLabel = mode === 'davis'
+    ? (extractionResult.document === 'mixed' ? 'Multiple documents' : capitalize(extractionResult.document || 'Form'))
+    : capitalize(extractionResult.document_type || 'Document');
+  document.getElementById('result-title').textContent = docLabel;
+  document.getElementById('result-meta').textContent = `${files.length} ${files.length === 1 ? 'page' : 'pages'} · ${new Date().toLocaleTimeString()}`;
+
+  // Flags
+  const flagsBar = document.getElementById('flags-bar');
+  const flags = extractionResult.flags || [];
+  if (flags.length) {
+    flagsBar.innerHTML = `<div class="flags-bar">
+      <div class="flag-title">Things to check</div>
+      ${flags.map(f => `⚠ ${escapeHtml(f)}`).join('<br>')}
+    </div>`;
+  } else {
+    flagsBar.innerHTML = '';
+  }
+
+  // Images panel
+  const imagesHtml = files.map(f => {
+    if (f.thumbUrl) return `<img src="${f.thumbUrl}" alt="" onclick="this.classList.toggle('zoomed')">`;
+    return `<div style="padding:10px;background:var(--rule-soft);border-radius:4px;font-size:12px;color:var(--ink-muted);">📄 ${escapeHtml(f.file.name || 'PDF')}</div>`;
+  }).join('');
+  document.getElementById('compare-images').innerHTML = imagesHtml;
+
+  if (mode === 'davis') {
+    document.getElementById('davis-result').style.display = '';
+    document.getElementById('general-result').style.display = 'none';
+    renderDavisFields();
+  } else {
+    document.getElementById('davis-result').style.display = 'none';
+    document.getElementById('general-result').style.display = '';
+    renderGeneralContent();
+  }
+
+  updateExportStats();
+}
+
+function renderDavisFields() {
+  const panel = document.getElementById('fields-panel');
+  const fields = extractionResult.fields || {};
+  const bySection = {};
+
+  // Group in the order defined in DAVIS_FIELDS
+  for (const [id, meta] of Object.entries(DAVIS_FIELDS)) {
+    if (!(id in fields)) continue;
+    (bySection[meta.section] ||= []).push({ id, meta, data: fields[id] });
+  }
+  // Also add any fields not in the known map
+  for (const [id, data] of Object.entries(fields)) {
+    if (!(id in DAVIS_FIELDS)) {
+      (bySection['Other'] ||= []).push({ id, meta: { label: id.replace(/_/g, ' ') }, data });
+    }
+  }
+
+  let html = '';
+  for (const [section, rows] of Object.entries(bySection)) {
+    html += `<div class="section-heading">${escapeHtml(section)}</div>`;
+    for (const { id, meta, data } of rows) {
+      const conf = data.confidence ?? 1;
+      const confClass = conf < 0.60 ? 'conf-red' : conf < 0.85 ? 'conf-amber' : '';
+      html += `
+        <div class="field-row ${confClass}" data-field-id="${id}">
+          <div class="field-label">${escapeHtml(meta.label)}</div>
+          <div class="field-value" data-field-id="${id}">${formatValue(id, meta, data.value)}</div>
+          <div class="conf-badge">${Math.round(conf * 100)}%</div>
+        </div>`;
+    }
+  }
+
+  panel.innerHTML = html;
+  attachEditing();
+}
+
+function formatValue(id, meta, value) {
+  if (value === null || value === undefined || value === '') {
+    return '<span class="empty">—</span>';
+  }
+  if (meta.type === 'yesno') {
+    return value === 'yes' ? '✓ Yes' : value === 'no' ? '✗ No' : escapeHtml(String(value));
+  }
+  if (meta.type === 'bool') {
+    return value ? '✓' : '—';
+  }
+  if (meta.type === 'select' && SELECT_LABELS[id]) {
+    return '✓ ' + escapeHtml(SELECT_LABELS[id][value] || String(value));
+  }
+  if (meta.type === 'children' && Array.isArray(value)) {
+    return value.map(c => `<div>${escapeHtml(c.name)} — age ${escapeHtml(String(c.age))}</div>`).join('');
+  }
+  return escapeHtml(String(value));
+}
+
+function attachEditing() {
+  document.querySelectorAll('.field-value').forEach(el => {
+    el.addEventListener('click', () => startEdit(el));
+  });
+}
+
+function startEdit(el) {
+  if (el.classList.contains('editing')) return;
+  const id = el.dataset.fieldId;
+  const meta = DAVIS_FIELDS[id] || {};
+  if (meta.type === 'children') return; // too complex inline
+
+  const current = extractionResult.fields[id].value;
+  const display = current === null || current === undefined ? '' : String(current);
+
+  el.classList.add('editing');
+  el.setAttribute('contenteditable', 'true');
+  el.textContent = display;
+  el.focus();
+  document.execCommand('selectAll', false, null);
+
+  const finish = () => {
+    el.removeAttribute('contenteditable');
+    el.classList.remove('editing');
+    const newVal = el.textContent.trim();
+    const oldVal = display;
+    if (newVal !== oldVal) {
+      extractionResult.fields[id].value = newVal || null;
+      extractionResult.fields[id].confidence = 1.0;
+      editedFields.add(id);
+      el.innerHTML = formatValue(id, meta, newVal || null) + '<span class="edit-dot" title="edited"></span>';
+      el.closest('.field-row').classList.remove('conf-amber', 'conf-red');
+      const badge = el.closest('.field-row').querySelector('.conf-badge');
+      if (badge) badge.textContent = '100%';
+      updateExportStats();
+    } else {
+      el.innerHTML = formatValue(id, meta, oldVal);
+    }
+  };
+
+  el.addEventListener('blur', finish, { once: true });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+    if (e.key === 'Escape') { el.textContent = display; el.blur(); }
+  });
+}
+
+function renderGeneralContent() {
+  const el = document.getElementById('general-result');
+  const r = extractionResult;
+  let html = `<div class="general-meta">`;
+  if (r.document_type) html += `<dt>Type</dt><dd>${escapeHtml(r.document_type)}</dd>`;
+  if (r.summary) html += `<dt>Summary</dt><dd>${escapeHtml(r.summary)}</dd>`;
+  html += `<dt>Pages</dt><dd>${r.pages_processed || files.length}</dd>`;
+  html += `</div>`;
+
+  html += `<div class="general-content">${markdownToHtml(r.content_markdown || '')}</div>`;
+
+  if (r.key_facts && r.key_facts.length) {
+    html += `<div class="key-facts">
+      <div class="key-facts-title">Key facts</div>
+      <dl class="key-facts-list">
+        ${r.key_facts.map(f => `<dt>${escapeHtml(f.label || '')}</dt><dd>${escapeHtml(f.value || '')}</dd>`).join('')}
+      </dl>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// Minimal markdown → HTML (headings, bold, lists, paragraphs)
+function markdownToHtml(md) {
+  const escaped = escapeHtml(md);
+  return escaped
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/^(?!<[hu])(.+)$/gm, '$1');
+}
+
+function updateExportStats() {
+  if (mode !== 'davis' || !extractionResult) {
+    document.getElementById('export-stats').textContent = '';
+    return;
+  }
+  const fields = extractionResult.fields || {};
+  const ids = Object.keys(fields);
+  const amber = ids.filter(id => {
+    const c = fields[id].confidence ?? 1;
+    return c >= 0.60 && c < 0.85;
+  }).length;
+  const red = ids.filter(id => (fields[id].confidence ?? 1) < 0.60).length;
+  const edited = editedFields.size;
+
+  const parts = [`${ids.length} fields`];
+  if (amber) parts.push(`${amber} to review`);
+  if (red) parts.push(`${red} flagged`);
+  if (edited) parts.push(`${edited} edited`);
+  document.getElementById('export-stats').textContent = parts.join(' · ');
+}
+
+// ── Export ──────────────────────────────────────────────────────────────
+document.getElementById('btn-copy').addEventListener('click', () => {
+  const payload = buildExport();
+  const text = mode === 'davis' ? JSON.stringify(payload, null, 2) : (payload.content_markdown || JSON.stringify(payload, null, 2));
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'))
+    .catch(() => showToast('Copy failed'));
+});
+
+document.getElementById('btn-download').addEventListener('click', () => {
+  const payload = buildExport();
+  const docLabel = (mode === 'davis' ? payload.document : payload.document_type || 'document').toString().replace(/\s+/g, '-');
+  const filename = `extraction-${docLabel}-${new Date().toISOString().slice(0,19).replace(/[:.]/g, '-')}.json`;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Downloaded');
+});
+
+document.getElementById('btn-email').addEventListener('click', () => {
+  const payload = buildExport();
+  const subject = mode === 'davis'
+    ? `Davis Financial — ${payload.document} extraction`
+    : `Extracted: ${payload.document_type || 'document'}`;
+  const body = mode === 'davis'
+    ? formatDavisEmail(payload)
+    : formatGeneralEmail(payload);
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+});
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  showStep('upload');
+});
+
+function buildExport() {
+  const result = JSON.parse(JSON.stringify(extractionResult));
+  result.approved_at = new Date().toISOString();
+  if (editedFields.size) result.edited_fields = [...editedFields];
+  return result;
+}
+
+function formatDavisEmail(payload) {
+  let out = `Davis Financial — Intake extraction\n`;
+  out += `Document: ${payload.document}\n`;
+  out += `Processed: ${payload.approved_at}\n\n`;
+
+  const fields = payload.fields || {};
+  const bySection = {};
+  for (const [id, meta] of Object.entries(DAVIS_FIELDS)) {
+    if (!(id in fields)) continue;
+    (bySection[meta.section] ||= []).push({ id, meta, data: fields[id] });
+  }
+  for (const [section, rows] of Object.entries(bySection)) {
+    out += `${section.toUpperCase()}\n`;
+    for (const { meta, data } of rows) {
+      const v = data.value === null ? '—' : Array.isArray(data.value) ? data.value.map(c => `${c.name} (${c.age})`).join(', ') : data.value;
+      out += `  ${meta.label}: ${v}\n`;
+    }
+    out += '\n';
+  }
+
+  if (payload.flags?.length) {
+    out += 'FLAGS\n' + payload.flags.map(f => `  - ${f}`).join('\n') + '\n';
+  }
+  return out;
+}
+
+function formatGeneralEmail(payload) {
+  let out = `${payload.document_type || 'Document'}\n\n`;
+  if (payload.summary) out += `${payload.summary}\n\n`;
+  out += `---\n\n${payload.content_markdown || ''}\n`;
+  if (payload.key_facts?.length) {
+    out += `\n---\nKey facts:\n`;
+    out += payload.key_facts.map(f => `  ${f.label}: ${f.value}`).join('\n');
+  }
+  return out;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorCard.classList.add('active');
+}
+
+function hideError() { errorCard.classList.remove('active'); }
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function capitalize(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ');
+}
+
+// Handle Share Target (PWA) — check for received files on load
+if ('launchQueue' in window) {
+  launchQueue.setConsumer(async (launchParams) => {
+    if (launchParams.files?.length) {
+      for (const handle of launchParams.files) {
+        const file = await handle.getFile();
+        addFile(file);
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

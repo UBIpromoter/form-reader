@@ -1,0 +1,29 @@
+{
+  "name": "form-reader",
+  "version": "0.1.0",
+  "description": "Upload a scan or photo of any form, get clean structured data back. Built as a thin AI extraction layer — users scan with whatever they already trust (iOS Notes, Google Drive, Adobe Scan) and upload to this tool for extraction.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UBIpromoter/form-reader.git"
+  },
+  "keywords": [
+    "ocr",
+    "document-scanner",
+    "form-extraction",
+    "claude",
+    "gemini"
+  ]
+}
