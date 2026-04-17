@@ -369,6 +369,7 @@ const FIELD_TYPES = {
 
   // Plain handwritten text — cap at 92%
   // (names, occupations, single-line freetext)
+  title: 'text', spouse_title: 'text',
   first_name: 'text', last_name: 'text', spouse_first: 'text', spouse_last: 'text',
   occupation: 'text', spouse_occupation: 'text', investable_thoughts: 'text',
   retire_when: 'text', retire_vision: 'text', tax_advisor: 'text',

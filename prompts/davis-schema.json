@@ -16,8 +16,10 @@
         {
           "title": "About You",
           "fields": [
+            { "id": "title", "label": "Title or honorific (optional — 'Dr.', 'Rev.', 'Judge', 'Prof.', 'Colonel', etc.) — ONLY include if the client explicitly wrote one. Otherwise null.", "type": "text", "optional": true },
             { "id": "first_name", "label": "First name (in a two-field row with last name)", "type": "text" },
             { "id": "last_name", "label": "Last name", "type": "text" },
+            { "id": "spouse_title", "label": "Spouse/partner title or honorific (optional — 'Dr.', 'Rev.', etc.) — ONLY if explicitly written", "type": "text", "optional": true, "conditional": "has_spouse=yes" },
             { "id": "dob", "label": "Date of birth", "type": "date" },
             { "id": "email", "label": "Email", "type": "email" },
             { "id": "phone", "label": "Phone", "type": "tel", "note": "10 digits" },
