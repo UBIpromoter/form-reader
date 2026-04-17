@@ -307,11 +307,95 @@ const COMMON_DOMAINS = [
   'protonmail.com', 'proton.me', 'fastmail.com', 'zoho.com'
 ];
 
+// Map of Davis field IDs to their "type" for confidence calibration.
+// Only fields the model can truly verify (selects with a clear mark,
+// explicitly null fields) should be allowed to carry 100% confidence.
+// Handwritten text, numbers, and free-text are never truly certain.
+const FIELD_TYPES = {
+  // Verifiable select fields — 100% is OK if clearly marked
+  has_spouse: 'select', has_children: 'select', existing_advisor: 'select',
+  income_range: 'select', net_worth_range: 'select', has_pension: 'select',
+  social_security: 'select', cash_flow_direction: 'select', housing: 'select',
+  has_other_property: 'select', has_stock_options: 'select', has_other_assets: 'select',
+  wealth_arc: 'select', paying_for_college: 'select', has_529: 'select',
+  protection_feel: 'select', has_will: 'select', has_poa: 'select', has_hcp: 'select',
+  estate_organized: 'select', values_investing: 'select', charitable: 'select',
+  involvement: 'select', tax_satisfaction: 'select',
+
+  // Boolean checkboxes — 100% if clearly checked
+  has_auto_loan: 'bool', has_student_loan: 'bool', has_personal_debt: 'bool',
+  has_credit_cards: 'bool', life_insurance_has: 'bool', disability_has: 'bool',
+  ltc_has: 'bool', vault_tax: 'bool', vault_investments: 'bool',
+  vault_insurance: 'bool', vault_estate: 'bool', vault_benefits: 'bool',
+  vault_equity: 'bool', vault_debt: 'bool', vault_ssn_statement: 'bool',
+
+  // Numeric / structured text — cap at 95%, lower if fails validation
+  phone: 'numeric', email: 'text_validated', dob: 'numeric', spouse_dob: 'numeric',
+  income_primary: 'numeric', income_spouse: 'numeric', cash_flow_amount: 'numeric',
+  monthly_need: 'numeric', home_value: 'numeric', mortgage_balance: 'numeric',
+  mortgage_payment: 'numeric', other_property_value: 'numeric',
+  other_property_mortgage: 'numeric', bank_total: 'numeric',
+  retirement_total: 'numeric', taxable_total: 'numeric', crypto_total: 'numeric',
+  college_savings_total: 'numeric', auto_bal: 'numeric', student_bal: 'numeric',
+  personal_bal: 'numeric', cc_bal: 'numeric', life_insurance_amount: 'numeric',
+  disability_amount: 'numeric', ltc_amount: 'numeric', will_updated: 'numeric',
+
+  // Plain handwritten text — cap at 92%
+  // (names, occupations, single-line freetext)
+  first_name: 'text', last_name: 'text', spouse_first: 'text', spouse_last: 'text',
+  occupation: 'text', spouse_occupation: 'text', investable_thoughts: 'text',
+  retire_when: 'text', retire_vision: 'text', tax_advisor: 'text',
+  estate_attorney: 'text', referral_source: 'text', other_property_type: 'text',
+
+  // Longer written text (writing boxes, textareas) — cap at 88%
+  other_dependents: 'longtext', pension_detail: 'longtext', future_inflows: 'longtext',
+  big_expenses: 'longtext', housing_plans: 'longtext', accounts_notes: 'longtext',
+  stock_options_detail: 'longtext', other_assets: 'longtext', wealth_comfort: 'longtext',
+  college_feeling: 'longtext', family_money_dynamics: 'longtext', matters_most: 'longtext',
+  values_detail: 'longtext', charitable_detail: 'longtext', why_now: 'longtext',
+  catalyst: 'longtext',
+
+  // Special
+  children: 'children'
+};
+
+// Confidence ceilings by field type
+const CONFIDENCE_CEILINGS = {
+  select: 1.00,       // clear mark on a known option
+  bool: 1.00,         // clear checkbox
+  numeric: 0.95,      // validated numeric — still handwriting
+  text_validated: 0.95, // validated text like email — passes format
+  text: 0.92,         // handwritten short text (name, occupation)
+  longtext: 0.88,     // handwritten paragraphs
+  children: 0.92      // array of {name, age, notes}
+};
+
 function validateDavisFields(result) {
   if (!result || !result.fields) return;
   result.flags = result.flags || [];
 
   const fields = result.fields;
+
+  // Step 1: apply calibrated confidence caps. Null values keep 1.0 (we're
+  // genuinely certain nothing was written). Everything else gets capped
+  // by field type so the reviewer never sees a fake 100% on a handwritten value.
+  for (const [id, field] of Object.entries(fields)) {
+    if (!field || typeof field !== 'object') continue;
+    // Null/empty fields — the model is genuinely certain
+    if (field.value === null || field.value === '' || field.value === undefined) {
+      field.confidence = 1.0;
+      continue;
+    }
+    // Array with zero items — same as null
+    if (Array.isArray(field.value) && field.value.length === 0) {
+      field.confidence = 1.0;
+      continue;
+    }
+    const type = FIELD_TYPES[id] || 'text';
+    const ceiling = CONFIDENCE_CEILINGS[type];
+    const modelConf = typeof field.confidence === 'number' ? field.confidence : 0.85;
+    field.confidence = Math.min(modelConf, ceiling);
+  }
 
   // Email validation — flag if TLD is unusual or domain looks wrong
   const email = fields.email?.value;

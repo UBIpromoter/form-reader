@@ -332,7 +332,17 @@
     color: var(--ink-soft);
     margin-bottom: 14px;
   }
-  .flags-bar .flag-title { font-weight: 600; color: var(--amber); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .flags-bar .flag-title { font-weight: 600; color: var(--amber); margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .flag-item {
+    display: block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .flag-item:hover { background: rgba(200, 138, 28, 0.15); text-decoration: underline; }
+  .flag-item::before { content: '⚠ '; }
 
   .compare {
     display: grid;
@@ -421,8 +431,30 @@
     word-break: break-word;
     padding: 2px 4px;
     border-radius: 3px;
+    position: relative;
+    transition: background 0.12s;
   }
-  .field-value:hover { background: rgba(6, 71, 137, 0.06); }
+  .field-value:hover {
+    background: rgba(6, 71, 137, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(6, 71, 137, 0.2);
+  }
+  .field-value:hover::after {
+    content: '✎';
+    position: absolute;
+    right: 4px;
+    top: 2px;
+    color: var(--navy);
+    font-size: 14px;
+    opacity: 0.6;
+  }
+  .field-value.editing:hover::after { display: none; }
+  .field-row.field-jumped {
+    animation: jump-highlight 2s ease-out;
+  }
+  @keyframes jump-highlight {
+    0%, 30% { background: #fff3cd; box-shadow: 0 0 0 2px var(--amber); }
+    100% { background: inherit; box-shadow: none; }
+  }
   .field-value.editing {
     outline: 2px solid var(--navy);
     background: white;
@@ -619,7 +651,7 @@
     <div class="processing" id="processing">
       <div class="spinner"></div>
       <div class="processing-msg" id="processing-msg">Reading your forms…</div>
-      <div class="processing-sub" id="processing-sub">This usually takes 5 to 10 seconds</div>
+      <div class="processing-sub" id="processing-sub">Usually takes 20–30 seconds. <span id="elapsed">0s</span> elapsed.</div>
       <button class="btn" id="btn-cancel" style="margin-top:18px;">Cancel</button>
     </div>
 
@@ -989,6 +1021,25 @@ modeSwitch.addEventListener('click', () => setMode('general'));
 modeBack.addEventListener('click', () => setMode('davis'));
 
 // ── Process ──────────────────────────────────────────────────────────────
+let elapsedTimer = null;
+function startElapsed() {
+  const el = document.getElementById('elapsed');
+  if (!el) return;
+  const start = Date.now();
+  el.textContent = '0s';
+  elapsedTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - start) / 1000);
+    el.textContent = s + 's';
+    // Update message if it's taking a long time
+    if (s > 40) {
+      processingMsg.textContent = 'Still reading — complex forms sometimes take longer.';
+    }
+  }, 1000);
+}
+function stopElapsed() {
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+}
+
 btnProcess.addEventListener('click', async () => {
   if (files.length === 0) return;
 
@@ -996,6 +1047,7 @@ btnProcess.addEventListener('click', async () => {
   filesStrip.style.display = 'none';
   processing.classList.add('active');
   processingMsg.textContent = mode === 'davis' ? 'Reading your forms…' : 'Digitizing…';
+  startElapsed();
   hideError();
 
   if (currentUploadAbort) currentUploadAbort.abort();
@@ -1019,8 +1071,10 @@ btnProcess.addEventListener('click', async () => {
 
     extractionResult = await response.json();
     currentUploadAbort = null;
+    stopElapsed();
     showResult();
   } catch (err) {
+    stopElapsed();
     if (err.name === 'AbortError') return; // Silent on user cancel
     processing.classList.remove('active');
     filesStrip.style.display = 'block';
@@ -1042,14 +1096,14 @@ function showResult() {
   document.getElementById('result-title').textContent = docLabel;
   document.getElementById('result-meta').textContent = `${files.length} ${files.length === 1 ? 'page' : 'pages'} · ${new Date().toLocaleTimeString()}`;
 
-  // Flags
+  // Flags — each one is clickable and tries to jump to the referenced field
   const flagsBar = document.getElementById('flags-bar');
   let flagsHtml = '';
   const flags = extractionResult.flags || [];
   if (flags.length) {
     flagsHtml += `<div class="flags-bar">
-      <div class="flag-title">Things to check</div>
-      ${flags.map(f => `⚠ ${escapeHtml(f)}`).join('<br>')}
+      <div class="flag-title">${flags.length} ${flags.length === 1 ? 'thing' : 'things'} to check</div>
+      ${flags.map(f => `<a class="flag-item" data-flag="${escAttr(f)}">${escapeHtml(f)}</a>`).join('')}
     </div>`;
   }
   const marginNotes = extractionResult.margin_notes || [];
@@ -1115,6 +1169,21 @@ function renderDavisFields() {
 
   panel.innerHTML = html;
   attachEditing();
+  attachFlagClicks();
+}
+
+function attachFlagClicks() {
+  window.DAVIS_FIELDS_CACHE = DAVIS_FIELDS;
+  document.querySelectorAll('.flag-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const fieldId = flagToFieldId(el.dataset.flag);
+      if (fieldId) {
+        jumpToField(fieldId);
+      } else {
+        showToast('Review the flagged fields below');
+      }
+    });
+  });
 }
 
 function formatValue(id, meta, value) {
@@ -1295,6 +1364,7 @@ document.getElementById('btn-back').addEventListener('click', () => {
 
 document.getElementById('btn-cancel').addEventListener('click', () => {
   if (currentUploadAbort) { currentUploadAbort.abort(); currentUploadAbort = null; }
+  stopElapsed();
   processing.classList.remove('active');
   filesStrip.style.display = 'block';
   btnProcess.disabled = false;
@@ -1381,6 +1451,42 @@ function escapeHtml(s) {
   const d = document.createElement('div');
   d.textContent = s == null ? '' : String(s);
   return d.innerHTML;
+}
+function escAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Jump to a field based on flag text. Flags often reference field IDs or labels.
+function jumpToField(fieldId) {
+  const row = document.querySelector(`.field-row[data-field-id="${fieldId}"]`);
+  if (!row) return false;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.remove('field-jumped');
+  // Force reflow to restart the animation
+  void row.offsetWidth;
+  row.classList.add('field-jumped');
+  return true;
+}
+
+function flagToFieldId(flagText) {
+  // Flags like "Multiple options marked on existing_advisor:" → "existing_advisor"
+  // Flags like "Email domain \"me.com\"" → "email"
+  // Flags like "Phone \"413-555-3847\" has 9 digits" → "phone"
+  const text = String(flagText || '').toLowerCase();
+
+  // Look for explicit field ID matches first
+  const fieldIds = Object.keys(window.DAVIS_FIELDS_CACHE || {});
+  for (const id of fieldIds) {
+    if (text.includes(id)) return id;
+  }
+
+  // Keyword heuristics
+  if (text.includes('email')) return 'email';
+  if (text.includes('phone') && text.includes('spouse')) return 'spouse_phone';
+  if (text.includes('phone')) return 'phone';
+  if (text.includes('spouse dob') || (text.includes('spouse') && text.includes('date of birth'))) return 'spouse_dob';
+  if (text.includes('date of birth') || text.includes('dob')) return 'dob';
+  return null;
 }
 
 function capitalize(s) {
