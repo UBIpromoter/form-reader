@@ -63,22 +63,51 @@ Per field, score 0.0–1.0:
 
 ---
 
-## Capture EVERYTHING handwritten outside the fields
+## Capture ONLY client-added content — NOT the form itself
 
-Anything the client wrote that isn't an answer to a specific labeled field goes in `margin_notes`. Be generous and inclusive:
+**CRITICAL:** The blank reference forms shown at the start of this conversation display the STANDARD content of every Davis form:
+- The logo and firm name "The Davis Financial Group" (top)
+- The tagline "Values-Based Financial Planning and Wealth Management"
+- The VBSI sub-line ("Values-Based Sustainable Investing")
+- The document marker (top right — "Quick Start", "Financial Sketch", or "What to Bring")
+- The footer text ("Strictly confidential... 10 Bay Road, Hadley, MA...")
+- The printed question labels, help text, and option labels
 
-- A phone number written in a corner
-- A name scribbled anywhere
-- An arrow with a comment
-- A correction, a strikethrough, a rewritten value
-- A sticky-note-style annotation between sections
-- A signature, initials, or date somewhere unexpected
-- A note in the margin pointing to a specific field (e.g. "see attached")
-- ANY text that appears on the page outside of a labeled-field answer zone
+**NONE of these are margin notes.** They are part of the form template and appear on every copy. DO NOT include them in `margin_notes`.
 
-Each entry: `{ "location": "<where on the page — top-right corner, beside name, margin between X and Y, etc.>", "text": "<exactly what they wrote>" }`.
+`margin_notes` is ONLY for content the client ADDED that is NOT present in the blank reference form:
 
-**If you see text and you're not sure whether it's an answer or a margin note, put it in margin_notes AND flag it.** Missing information is worse than redundant information.
+- A phone number the client scribbled in a corner
+- A name written somewhere unexpected
+- An arrow with a comment the client drew
+- A correction, a strikethrough, or a rewritten value
+- A sticky-note-style annotation the client added between sections
+- A signature, initials, or date the client wrote somewhere unusual
+- A note in the margin pointing to a field
+- ANY handwritten text that doesn't appear on the blank reference
+
+Compare visually against the references. If the text appears on both the blank AND the filled version, it's part of the form — ignore. If it ONLY appears on the filled version, it's a margin note — capture.
+
+Each entry: `{ "location": "<rough area — 'margin', 'between About You and Quick Picture', 'near header', 'below signature line', etc. Do not give precise coordinates>", "text": "<exactly what they wrote>" }`.
+
+If you're genuinely uncertain about a location, write `"somewhere on the page"` rather than guessing. Accuracy on location matters less than accuracy on the text itself.
+
+## Split rows — which column is which person?
+
+Some questions put two answers in one row with a single label. Example: the "What you do for work" question on the Quick Start is ONE label with TWO writing lines beside it. Which line is whose?
+
+**The rule:** match the order of the name fields at the top of the form.
+
+- The **first** sub-field answers for the **primary client** (the person named in `first_name` / `last_name`).
+- The **second** sub-field answers for the **spouse or partner** (the person named in `spouse_first` / `spouse_last`).
+
+So for a two-line "What you do for work" row:
+- First line → `occupation`
+- Second line → `spouse_occupation`
+
+Never concatenate two answers into one field. If both lines have handwritten answers, they go into two separate field IDs as listed in the schema.
+
+The same rule applies to any row-style split: left/first column → primary, right/second column → spouse.
 
 ## Handle contextual annotations NEAR fields
 

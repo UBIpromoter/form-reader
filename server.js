@@ -281,9 +281,107 @@ async function handleExtract(req, res, ip) {
   const references = mode === 'davis' ? (REFERENCES.davis || []) : [];
   const result = await callOpenRouter(files, prompt, references);
 
+  // Post-processing validation: sanity-check values and add flags for anything
+  // that looks suspicious. The model is fast but fallible; these are cheap
+  // server-side checks that catch the most common handwriting miscues.
+  if (mode === 'davis') {
+    validateDavisFields(result);
+  }
+
   console.log(`[${new Date().toISOString()}] extract complete`);
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(result));
+}
+
+// ── Davis field validation ──────────────────────────────────────────────────
+const COMMON_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'io', 'co', 'us', 'me',
+  'info', 'biz', 'us', 'uk', 'ca', 'eu', 'ai', 'dev', 'app', 'tech'
+]);
+
+// Common free-mail domains — we can be more specific about these
+const COMMON_DOMAINS = [
+  'gmail.com', 'yahoo.com', 'yahoo.co.uk', 'hotmail.com', 'outlook.com',
+  'aol.com', 'icloud.com', 'me.com', 'mac.com', 'mail.com', 'msn.com',
+  'comcast.net', 'verizon.net', 'att.net', 'cox.net', 'sbcglobal.net',
+  'protonmail.com', 'proton.me', 'fastmail.com', 'zoho.com'
+];
+
+function validateDavisFields(result) {
+  if (!result || !result.fields) return;
+  result.flags = result.flags || [];
+
+  const fields = result.fields;
+
+  // Email validation — flag if TLD is unusual or domain looks wrong
+  const email = fields.email?.value;
+  if (email && typeof email === 'string') {
+    const emailMatch = email.match(/^[^\s@]+@([^\s@]+\.[^\s@]+)$/);
+    if (!emailMatch) {
+      result.flags.push(`Email "${email}" doesn't match the expected format — please verify.`);
+      fields.email.confidence = Math.min(fields.email.confidence || 1, 0.5);
+    } else {
+      const domain = emailMatch[1].toLowerCase();
+      const tld = domain.split('.').pop();
+      // If the domain is short and ambiguous (like "me.com" vs "mail.com"),
+      // explicitly flag it so the reviewer double-checks.
+      const suspiciousShortDomains = ['me.com', 'ml.com', 'mi.com', 'ma.com'];
+      if (suspiciousShortDomains.includes(domain) || !COMMON_TLDS.has(tld)) {
+        result.flags.push(`Email domain "${domain}" — please double-check (handwritten emails are easy to misread).`);
+        fields.email.confidence = Math.min(fields.email.confidence || 1, 0.7);
+      }
+    }
+  }
+
+  // Phone validation — must be 10 digits when cleaned
+  const phone = fields.phone?.value;
+  if (phone && typeof phone === 'string') {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10 && digits.length !== 11) {
+      result.flags.push(`Phone "${phone}" has ${digits.length} digits — expected 10. Please verify.`);
+      fields.phone.confidence = Math.min(fields.phone.confidence || 1, 0.4);
+    }
+  }
+
+  // Spouse phone (if present in financial sketch)
+  const spousePhone = fields.spouse_phone?.value;
+  if (spousePhone && typeof spousePhone === 'string') {
+    const digits = spousePhone.replace(/\D/g, '');
+    if (digits.length !== 10 && digits.length !== 11) {
+      result.flags.push(`Spouse phone "${spousePhone}" has ${digits.length} digits — expected 10. Please verify.`);
+    }
+  }
+
+  // DOB sanity: year should be plausible (1900-2025)
+  const checkDob = (field, label) => {
+    const v = fields[field]?.value;
+    if (!v || typeof v !== 'string') return;
+    const yearMatch = v.match(/\b(19\d{2}|20\d{2}|\d{2})\b/g);
+    if (!yearMatch) {
+      result.flags.push(`${label} "${v}" — could not find a year. Please verify.`);
+    }
+  };
+  checkDob('dob', 'Date of birth');
+  checkDob('spouse_dob', 'Spouse DOB');
+
+  // Margin notes that look like they might be from the masthead — flag for review
+  if (Array.isArray(result.margin_notes)) {
+    const mastheadKeywords = [
+      'davis financial group', 'values-based', 'vbsi', 'quick start',
+      'financial sketch', 'what to bring', 'strictly confidential',
+      '10 bay road', 'hadley'
+    ];
+    result.margin_notes = result.margin_notes.filter(note => {
+      const text = (note.text || '').toLowerCase();
+      const looksLikeMasthead = mastheadKeywords.some(kw => text.includes(kw));
+      if (looksLikeMasthead) {
+        console.log(`[post-proc] dropping margin note that looks like masthead: "${note.text}"`);
+        return false;
+      }
+      return true;
+    });
+    if (result.margin_notes.length === 0) delete result.margin_notes;
+  }
 }
 
 // ── Multipart parser with hard total-bytes cap ──────────────────────────────
