@@ -613,6 +613,7 @@
       <div class="spinner"></div>
       <div class="processing-msg" id="processing-msg">Reading your forms…</div>
       <div class="processing-sub" id="processing-sub">This usually takes 5 to 10 seconds</div>
+      <button class="btn" id="btn-cancel" style="margin-top:18px;">Cancel</button>
     </div>
 
     <div class="error-card" id="error-card">
@@ -810,6 +811,7 @@ let files = [];            // [{ file, thumbUrl, id }]
 let mode = 'davis';        // 'davis' or 'general'
 let extractionResult = null;
 let editedFields = new Set();
+let currentUploadAbort = null; // AbortController for in-flight extraction
 
 // ── DOM refs ─────────────────────────────────────────────────────────────
 const stepUpload = document.getElementById('step-upload');
@@ -985,6 +987,9 @@ btnProcess.addEventListener('click', async () => {
   processingMsg.textContent = mode === 'davis' ? 'Reading your forms…' : 'Digitizing…';
   hideError();
 
+  if (currentUploadAbort) currentUploadAbort.abort();
+  currentUploadAbort = new AbortController();
+
   try {
     const formData = new FormData();
     formData.append('mode', mode);
@@ -992,7 +997,8 @@ btnProcess.addEventListener('click', async () => {
 
     const response = await fetch('/extract', {
       method: 'POST',
-      body: formData
+      body: formData,
+      signal: currentUploadAbort.signal
     });
 
     if (!response.ok) {
@@ -1001,8 +1007,10 @@ btnProcess.addEventListener('click', async () => {
     }
 
     extractionResult = await response.json();
+    currentUploadAbort = null;
     showResult();
   } catch (err) {
+    if (err.name === 'AbortError') return; // Silent on user cancel
     processing.classList.remove('active');
     filesStrip.style.display = 'block';
     showError(err.message || 'Something went wrong');
@@ -1247,7 +1255,15 @@ document.getElementById('btn-email').addEventListener('click', () => {
 });
 
 document.getElementById('btn-back').addEventListener('click', () => {
+  if (currentUploadAbort) { currentUploadAbort.abort(); currentUploadAbort = null; }
   showStep('upload');
+});
+
+document.getElementById('btn-cancel').addEventListener('click', () => {
+  if (currentUploadAbort) { currentUploadAbort.abort(); currentUploadAbort = null; }
+  processing.classList.remove('active');
+  filesStrip.style.display = 'block';
+  btnProcess.disabled = false;
 });
 
 function buildExport() {

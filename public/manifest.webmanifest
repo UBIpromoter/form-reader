@@ -20,27 +20,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "share_target": {
-    "action": "/",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "files": [
-        {
-          "name": "files",
-          "accept": ["image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf"]
-        }
-      ]
-    }
-  },
-  "file_handlers": [
-    {
-      "action": "/",
-      "accept": {
-        "image/*": [".jpg", ".jpeg", ".png", ".heic", ".heif"],
-        "application/pdf": [".pdf"]
-      }
-    }
   ]
 }
