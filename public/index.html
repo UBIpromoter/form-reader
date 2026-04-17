@@ -703,7 +703,7 @@
         <button class="btn" id="btn-back">↶ Back</button>
         <button class="btn" id="btn-copy">Copy</button>
         <button class="btn" id="btn-email">Email</button>
-        <button class="btn btn-primary" id="btn-download">Download JSON</button>
+        <button class="btn btn-primary" id="btn-save-all" title="Save a single file with the original scan and the extracted data together">Save everything</button>
       </div>
     </div>
   </section>
@@ -1334,17 +1334,180 @@ document.getElementById('btn-copy').addEventListener('click', () => {
     .catch(() => showToast('Copy failed'));
 });
 
-document.getElementById('btn-download').addEventListener('click', () => {
+document.getElementById('btn-save-all').addEventListener('click', async () => {
   const payload = buildExport();
-  const docLabel = (mode === 'davis' ? payload.document : payload.document_type || 'document').toString().replace(/\s+/g, '-');
-  const filename = `extraction-${docLabel}-${new Date().toISOString().slice(0,19).replace(/[:.]/g, '-')}.json`;
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-  showToast('Downloaded');
+  showToast('Building bundle...');
+  try {
+    const bundleHtml = await buildBundleHtml(payload);
+    const docLabel = (mode === 'davis' ? payload.document : payload.document_type || 'document').toString().replace(/\s+/g, '-');
+    const nameHint = (payload.fields?.first_name?.value && payload.fields?.last_name?.value)
+      ? `-${payload.fields.first_name.value}-${payload.fields.last_name.value}`.toLowerCase().replace(/[^a-z0-9-]/g, '')
+      : '';
+    const ts = new Date().toISOString().slice(0, 10);
+    const filename = `${docLabel}${nameHint}-${ts}.html`;
+    const blob = new Blob([bundleHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Saved — open the file to see the scan + extracted data together');
+  } catch (err) {
+    showToast('Save failed: ' + err.message);
+  }
 });
+
+async function fileToBase64DataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function buildBundleHtml(payload) {
+  // Embed each uploaded file as a base64 data URL so the HTML is self-contained
+  const images = [];
+  for (const f of files) {
+    try {
+      const dataUrl = await fileToBase64DataUrl(f.file);
+      images.push({ name: f.file.name || 'scan', dataUrl, type: f.file.type });
+    } catch (e) { /* skip */ }
+  }
+
+  const clientName = mode === 'davis' && payload.fields?.first_name?.value
+    ? `${payload.fields.first_name.value || ''} ${payload.fields.last_name?.value || ''}`.trim()
+    : '';
+  const docLabel = mode === 'davis'
+    ? (payload.document === 'mixed' ? 'Multiple Documents' : capitalize(payload.document || 'Form'))
+    : capitalize(payload.document_type || 'Document');
+  const savedAt = new Date().toLocaleString();
+
+  // Build the fields table
+  let fieldsHtml = '';
+  if (mode === 'davis') {
+    const fields = payload.fields || {};
+    const bySection = {};
+    for (const [id, meta] of Object.entries(DAVIS_FIELDS)) {
+      if (!(id in fields)) continue;
+      (bySection[meta.section] ||= []).push({ id, meta, data: fields[id] });
+    }
+    for (const [section, rows] of Object.entries(bySection)) {
+      fieldsHtml += `<h3>${escapeHtml(section)}</h3><dl>`;
+      for (const { id, meta, data } of rows) {
+        const conf = data.confidence ?? 1;
+        const confClass = conf < 0.60 ? 'conf-red' : conf < 0.85 ? 'conf-amber' : '';
+        const formatted = formatValueForBundle(id, meta, data.value);
+        fieldsHtml += `<dt>${escapeHtml(meta.label)}</dt><dd class="${confClass}">${formatted}<span class="conf">${Math.round(conf*100)}%</span></dd>`;
+      }
+      fieldsHtml += `</dl>`;
+    }
+  } else {
+    fieldsHtml = `
+      <h3>Summary</h3>
+      <p>${escapeHtml(payload.summary || '')}</p>
+      <h3>Content</h3>
+      <div class="content">${escapeHtml(payload.content_markdown || '')}</div>
+      ${payload.key_facts?.length ? `<h3>Key facts</h3><dl>${payload.key_facts.map(f => `<dt>${escapeHtml(f.label)}</dt><dd>${escapeHtml(f.value)}</dd>`).join('')}</dl>` : ''}
+    `;
+  }
+
+  // Flags and margin notes
+  let flagsHtml = '';
+  if (payload.flags?.length) {
+    flagsHtml += `<div class="callout flag"><strong>Things to check:</strong><ul>${payload.flags.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>`;
+  }
+  if (payload.margin_notes?.length) {
+    flagsHtml += `<div class="callout margin"><strong>Margin notes:</strong><ul>${payload.margin_notes.map(n => `<li><em>${escapeHtml(n.location || 'page')}:</em> ${escapeHtml(n.text)}</li>`).join('')}</ul></div>`;
+  }
+
+  // Images section
+  const imagesHtml = images.length
+    ? images.map((img, i) => `
+        <figure>
+          <img src="${img.dataUrl}" alt="Scan ${i+1}">
+          <figcaption>${escapeHtml(img.name)}</figcaption>
+        </figure>`).join('')
+    : '<p style="color:#888;"><em>No images available</em></p>';
+
+  // Raw JSON for machine consumption
+  const rawJson = JSON.stringify(payload, null, 2);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Form Reader — ${escapeHtml(docLabel)}${clientName ? ' — ' + escapeHtml(clientName) : ''}</title>
+<style>
+  body { font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; color: #1a2a3a; background: #f4f6f9; margin: 0; padding: 24px; line-height: 1.55; }
+  .wrap { max-width: 900px; margin: 0 auto; background: white; padding: 32px 40px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  header { border-bottom: 2px solid #064789; padding-bottom: 16px; margin-bottom: 24px; }
+  h1 { font-family: Georgia, serif; font-size: 24px; color: #064789; margin: 0 0 6px; }
+  h2 { font-family: Georgia, serif; font-size: 18px; color: #064789; margin: 28px 0 12px; }
+  h3 { font-family: Georgia, serif; font-size: 14px; color: #064789; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0 8px; }
+  .meta { color: #6b7280; font-size: 13px; }
+  dl { display: grid; grid-template-columns: 40% 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
+  dt { color: #4a5568; font-weight: 500; padding: 6px 0; }
+  dd { margin: 0; padding: 6px 0; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid #eef1f4; }
+  dd.conf-amber { background: #fef6e4; padding-left: 6px; padding-right: 6px; border-radius: 3px; }
+  dd.conf-red { background: #fde9e7; padding-left: 6px; padding-right: 6px; border-radius: 3px; }
+  .conf { color: #9ca3af; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .callout { background: #fef6e4; border-left: 3px solid #d4920b; padding: 10px 14px; border-radius: 3px; margin: 14px 0; font-size: 13px; }
+  .callout.margin { background: #e8f0dd; border-color: #82a055; }
+  .callout ul { margin: 6px 0 0; padding-left: 20px; }
+  figure { margin: 14px 0 20px; }
+  figure img { max-width: 100%; border: 1px solid #e3e7eb; border-radius: 4px; display: block; }
+  figcaption { font-size: 12px; color: #6b7280; margin-top: 6px; font-style: italic; }
+  details { margin-top: 30px; padding-top: 16px; border-top: 1px solid #e3e7eb; }
+  summary { cursor: pointer; color: #6b7280; font-size: 12px; letter-spacing: .04em; }
+  pre { background: #f4f6f9; padding: 14px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 10px; }
+  .content { white-space: pre-wrap; font-size: 14px; }
+  @media print {
+    body { background: white; padding: 0; }
+    .wrap { box-shadow: none; max-width: 100%; padding: 20px; }
+    figure { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>${escapeHtml(docLabel)}${clientName ? ' — ' + escapeHtml(clientName) : ''}</h1>
+    <div class="meta">The Davis Financial Group · Form Reader · Saved ${escapeHtml(savedAt)}</div>
+  </header>
+
+  ${flagsHtml}
+
+  <h2>Extracted data</h2>
+  ${fieldsHtml}
+
+  <h2>Original scan${images.length !== 1 ? 's' : ''}</h2>
+  ${imagesHtml}
+
+  <details>
+    <summary>Raw JSON (for import / machine use)</summary>
+    <pre>${escapeHtml(rawJson)}</pre>
+  </details>
+</div>
+
+</body>
+</html>`;
+}
+
+function formatValueForBundle(id, meta, value) {
+  if (value === null || value === undefined || value === '') return '<em style="color:#9ca3af;">—</em>';
+  if (meta.type === 'yesno') return value === 'yes' ? '✓ Yes' : value === 'no' ? '✗ No' : escapeHtml(String(value));
+  if (meta.type === 'bool') return value ? '✓' : '—';
+  if (meta.type === 'select' && SELECT_LABELS[id]) return '✓ ' + escapeHtml(SELECT_LABELS[id][value] || String(value));
+  if (meta.type === 'children' && Array.isArray(value)) {
+    return value.map(c => `${escapeHtml(c?.name || '')} — age ${escapeHtml(String(c?.age || ''))}${c?.notes ? ` <em style="color:#6f8c47;">(${escapeHtml(String(c.notes))})</em>` : ''}`).join('<br>');
+  }
+  if (Array.isArray(value)) {
+    return '<strong style="color:#d4920b;">⚠ Multiple: </strong>' + value.map(escapeHtml).join(', ');
+  }
+  return escapeHtml(String(value));
+}
 
 document.getElementById('btn-email').addEventListener('click', () => {
   const payload = buildExport();

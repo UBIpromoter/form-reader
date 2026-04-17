@@ -1,0 +1,195 @@
+{
+  "_description": "Structured field inventory for Davis Financial Group intake forms. This is the ground truth for what each form should contain. Update this when the forms change — no code changes needed, the server reads this on startup.",
+  "firm": {
+    "name": "The Davis Financial Group",
+    "tagline": "Values-Based Financial Planning and Wealth Management",
+    "subline": "VBSI — Values-Based Sustainable Investing",
+    "address": "10 Bay Road, Hadley, MA",
+    "footer": "Strictly confidential · Never shared without your consent"
+  },
+  "documents": {
+    "quick-start": {
+      "pages": 1,
+      "marker": "Quick Start",
+      "intro": "A few minutes of your time, to prepare for a great first conversation.",
+      "sections": [
+        {
+          "title": "About You",
+          "fields": [
+            { "id": "first_name", "label": "First name (in a two-field row with last name)", "type": "text" },
+            { "id": "last_name", "label": "Last name", "type": "text" },
+            { "id": "dob", "label": "Date of birth", "type": "date" },
+            { "id": "email", "label": "Email", "type": "email" },
+            { "id": "phone", "label": "Phone", "type": "tel", "note": "10 digits" },
+            { "id": "has_spouse", "label": "Spouse or partner?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "spouse_first", "label": "If yes: spouse/partner first name", "type": "text", "conditional": "has_spouse=yes" },
+            { "id": "spouse_last", "label": "If yes: spouse/partner last name", "type": "text", "conditional": "has_spouse=yes" },
+            { "id": "spouse_dob", "label": "If yes: spouse/partner date of birth", "type": "date", "conditional": "has_spouse=yes" },
+            { "id": "has_children", "label": "Children?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "children", "label": "If yes: names and ages", "type": "array", "item_shape": { "name": "text", "age": "text", "notes": "text (disability / special needs / twin / adopted / etc.)" }, "conditional": "has_children=yes" },
+            { "id": "other_dependents", "label": "Anyone else you're financially responsible for?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "The Quick Picture",
+          "fields": [
+            { "id": "occupation", "label": "What do you do for work? (first column in a two-column row)", "type": "text" },
+            { "id": "spouse_occupation", "label": "What does your spouse or partner do? (second column in the same row)", "type": "text", "conditional": "has_spouse=yes" },
+            { "id": "income_range", "label": "Household income range", "type": "button-select", "options": ["under-100k", "100k-250k", "250k-500k", "over-500k"] },
+            { "id": "net_worth_range", "label": "Rough net worth", "type": "button-select", "options": ["under-500k", "500k-2m", "2m-10m", "over-10m"] },
+            { "id": "investable_thoughts", "label": "How much, roughly, are you looking for help managing?", "type": "text", "optional": true },
+            { "id": "existing_advisor", "label": "Do you currently work with a financial advisor?", "type": "button-select", "options": ["yes", "no", "previously"] }
+          ]
+        },
+        {
+          "title": "What Brings You Here",
+          "fields": [
+            { "id": "why_now", "label": "What's prompting you to look for a financial advisor right now?", "type": "textarea", "note": "Printed help text under this question reads 'A life change, approaching retirement, or maybe it's just been on your list for too long. Whatever the reason, we'd like to hear it.' IGNORE that help text — extract only what the client wrote." },
+            { "id": "catalyst", "label": "What's on your mind financially these days?", "type": "textarea", "note": "Printed help text reads 'The things you worry about, the questions you can't quite answer, the decisions that feel hard. We want to understand what keeps you up at night so we know where to focus.' IGNORE that help text." },
+            { "id": "referral_source", "label": "And how did you find your way to us?", "type": "text", "optional": true }
+          ]
+        }
+      ]
+    },
+    "financial-sketch": {
+      "pages": 3,
+      "marker": "Financial Sketch",
+      "intro": "Let's sketch the big picture. We'll handle the details together from here.",
+      "sections": [
+        {
+          "title": "Your Income",
+          "fields": [
+            { "id": "income_primary", "label": "Your gross annual income", "type": "dollar" },
+            { "id": "income_spouse", "label": "Their gross annual income (spouse/partner)", "type": "dollar", "conditional": "has_spouse=yes" },
+            { "id": "income_other", "label": "Other current income sources?", "type": "textarea", "optional": true },
+            { "id": "has_pension", "label": "Pension?", "type": "toggle", "options": ["yes", "no", "unsure"] },
+            { "id": "pension_detail", "label": "If yes: details", "type": "textarea", "conditional": "has_pension=yes" },
+            { "id": "social_security", "label": "Social Security plans", "type": "button-select", "options": ["taking", "soon", "wait", "far-off"] },
+            { "id": "future_inflows", "label": "Any other money you expect down the road?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "Your Cash Flow",
+          "fields": [
+            { "id": "cash_flow_direction", "label": "Are you currently...", "type": "button-select", "options": ["saving", "breaking-even", "drawing-down"] },
+            { "id": "cash_flow_amount", "label": "By roughly how much per month?", "type": "dollar" },
+            { "id": "monthly_need", "label": "Total monthly expenses", "type": "dollar", "optional": true },
+            { "id": "big_expenses", "label": "Any major expenditures on the horizon?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "What You Own",
+          "fields": [
+            { "id": "housing", "label": "Primary residence", "type": "button-select", "options": ["own", "rent"] },
+            { "id": "home_value", "label": "If own: home value", "type": "dollar", "conditional": "housing=own" },
+            { "id": "mortgage_balance", "label": "If own: mortgage balance", "type": "dollar", "conditional": "housing=own" },
+            { "id": "mortgage_payment", "label": "If own: monthly payment", "type": "dollar", "conditional": "housing=own" },
+            { "id": "has_other_property", "label": "Any other real estate?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "other_property_type", "label": "If yes: what is it?", "type": "text", "conditional": "has_other_property=yes" },
+            { "id": "other_property_value", "label": "If yes: rough value", "type": "dollar", "conditional": "has_other_property=yes" },
+            { "id": "other_property_mortgage", "label": "If yes: mortgage balance", "type": "dollar", "conditional": "has_other_property=yes" },
+            { "id": "housing_plans", "label": "How do you imagine your housing might change over the next 5-10 years?", "type": "textarea", "optional": true },
+            { "id": "bank_total", "label": "Bank accounts total", "type": "dollar" },
+            { "id": "retirement_total", "label": "Retirement accounts total (401k, IRA, etc.)", "type": "dollar" },
+            { "id": "taxable_total", "label": "Taxable investments total", "type": "dollar" },
+            { "id": "crypto_total", "label": "Crypto or digital assets total", "type": "dollar", "optional": true },
+            { "id": "accounts_notes", "label": "Anything we should know about your accounts?", "type": "textarea", "optional": true },
+            { "id": "has_stock_options", "label": "Equity compensation?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "stock_options_detail", "label": "If yes: describe briefly", "type": "textarea", "conditional": "has_stock_options=yes" },
+            { "id": "has_other_assets", "label": "Other significant assets?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "other_assets", "label": "If yes: describe briefly", "type": "textarea", "conditional": "has_other_assets=yes" },
+            { "id": "wealth_arc", "label": "How did you get to where you are financially?", "type": "button-select", "options": ["steady", "recent", "mix"] },
+            { "id": "wealth_comfort", "label": "How are you feeling about all of it?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "Children's Education",
+          "conditional": "has_children=yes",
+          "fields": [
+            { "id": "paying_for_college", "label": "Are you planning to help pay for college?", "type": "button-select", "options": ["yes-full", "yes-partial", "no", "unsure"] },
+            { "id": "has_529", "label": "529 plans or other college savings?", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "college_savings_total", "label": "If yes: rough total saved", "type": "dollar", "conditional": "has_529=yes" },
+            { "id": "college_feeling", "label": "How are you feeling about college funding?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "Other Debts",
+          "fields": [
+            { "id": "has_auto_loan", "label": "Car loan or lease", "type": "bool" },
+            { "id": "auto_bal", "label": "Car loan balance", "type": "dollar", "conditional": "has_auto_loan=true" },
+            { "id": "has_student_loan", "label": "Student loans", "type": "bool" },
+            { "id": "student_bal", "label": "Student loan balance", "type": "dollar", "conditional": "has_student_loan=true" },
+            { "id": "has_personal_debt", "label": "Personal or business debt", "type": "bool" },
+            { "id": "personal_bal", "label": "Personal/business debt balance", "type": "dollar", "conditional": "has_personal_debt=true" },
+            { "id": "has_credit_cards", "label": "Credit card debt carried month to month", "type": "bool" },
+            { "id": "cc_bal", "label": "Credit card balance", "type": "dollar", "conditional": "has_credit_cards=true" }
+          ]
+        },
+        {
+          "title": "Your Safety Net",
+          "fields": [
+            { "id": "life_insurance_has", "label": "Life insurance", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "life_insurance_amount", "label": "Rough total life coverage", "type": "text", "conditional": "life_insurance_has=yes" },
+            { "id": "disability_has", "label": "Disability insurance", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "disability_amount", "label": "Disability monthly benefit", "type": "text", "conditional": "disability_has=yes" },
+            { "id": "ltc_has", "label": "Long-term care insurance", "type": "toggle", "options": ["yes", "no"] },
+            { "id": "ltc_amount", "label": "LTC daily benefit", "type": "text", "conditional": "ltc_has=yes" },
+            { "id": "protection_feel", "label": "Overall, how protected do you feel?", "type": "button-select", "options": ["well-covered", "some-gaps", "unsure", "concerned"] }
+          ]
+        },
+        {
+          "title": "Estate Planning",
+          "fields": [
+            { "id": "has_will", "label": "Will or trust?", "type": "button-select", "options": ["yes", "no", "unsure"] },
+            { "id": "will_updated", "label": "If yes: when last updated", "type": "text", "conditional": "has_will=yes", "optional": true },
+            { "id": "has_poa", "label": "Power of attorney designated?", "type": "button-select", "options": ["yes", "no", "unsure"] },
+            { "id": "has_hcp", "label": "Health care proxy designated?", "type": "button-select", "options": ["yes", "no", "unsure"] },
+            { "id": "estate_organized", "label": "Are your estate documents organized?", "type": "button-select", "options": ["yes", "somewhat", "no"] },
+            { "id": "family_money_dynamics", "label": "Family or intergenerational money dynamics?", "type": "textarea", "optional": true }
+          ]
+        },
+        {
+          "title": "Your Values & Plans",
+          "fields": [
+            { "id": "matters_most", "label": "What matters most to you about your financial future?", "type": "textarea" },
+            { "id": "values_investing", "label": "Is it important that your investments reflect your personal values?", "type": "button-select", "options": ["important", "somewhat", "not-priority"] },
+            { "id": "values_detail", "label": "If important: tell us more", "type": "textarea", "conditional": "values_investing=important" },
+            { "id": "charitable", "label": "Is charitable giving part of your life?", "type": "button-select", "options": ["active", "some", "interested", "not-now"] },
+            { "id": "charitable_detail", "label": "What causes or organizations do you care about?", "type": "textarea", "optional": true },
+            { "id": "retire_when", "label": "When would you like to retire?", "type": "text", "optional": true },
+            { "id": "retire_vision", "label": "What do you imagine for your retirement?", "type": "text", "optional": true },
+            { "id": "involvement", "label": "How involved do you want to be?", "type": "button-select", "options": ["hands-on", "guided", "hands-off"] }
+          ]
+        },
+        {
+          "title": "Other Professionals",
+          "fields": [
+            { "id": "tax_advisor", "label": "Tax advisor (name and firm)", "type": "text", "optional": true },
+            { "id": "estate_attorney", "label": "Estate attorney (name and firm)", "type": "text", "optional": true },
+            { "id": "tax_satisfaction", "label": "How are your taxes being handled?", "type": "button-select", "options": ["great", "okay", "help"] }
+          ]
+        }
+      ]
+    },
+    "what-to-bring": {
+      "pages": 1,
+      "marker": "What to Bring",
+      "intro": "Bring us what you have. We'll help with the rest.",
+      "sections": [
+        {
+          "title": "Documents to Gather",
+          "fields": [
+            { "id": "vault_tax", "label": "Tax Returns", "type": "bool" },
+            { "id": "vault_investments", "label": "Investment Statements", "type": "bool" },
+            { "id": "vault_insurance", "label": "Insurance Policies", "type": "bool" },
+            { "id": "vault_estate", "label": "Estate Documents", "type": "bool" },
+            { "id": "vault_benefits", "label": "Employee Benefits Summary", "type": "bool" },
+            { "id": "vault_equity", "label": "Equity Compensation", "type": "bool" },
+            { "id": "vault_debt", "label": "Mortgage & Loan Statements", "type": "bool" },
+            { "id": "vault_ssn_statement", "label": "Social Security Statement", "type": "bool" }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -39,31 +39,54 @@ const PROMPTS = {
   general: fs.readFileSync(path.join(__dirname, 'prompts/general.md'), 'utf8')
 };
 
-// ── Reference images (the blank forms) ──────────────────────────────────────
-// Included at the start of Davis-mode extraction so the model has a precise
-// anchor for what a blank Davis form looks like. If forms change, re-render
-// these PNGs; no code change needed.
-const REFERENCES = {};
+// ── Structured schema (the blank-form ground truth as data, not image) ──────
+// Describes every field the Davis forms should contain. The model reads this
+// as authoritative structure — what fields exist, what types, what valid
+// option values. Cheaper and more precise than sending blank-form PNGs.
+// Update the JSON when the form changes; no code change needed.
+let DAVIS_SCHEMA = null;
 try {
-  const refDir = path.join(__dirname, 'prompts/reference');
-  if (fs.existsSync(refDir)) {
-    REFERENCES.davis = [];
-    for (const name of ['quick-start.png', 'financial-sketch.png', 'what-to-bring.png']) {
-      const p = path.join(refDir, name);
-      if (fs.existsSync(p)) {
-        REFERENCES.davis.push({
-          filename: name,
-          mediaType: 'image/png',
-          buffer: fs.readFileSync(p),
-          label: name.replace('.png', '')
-        });
-      }
-    }
-    console.log(`Loaded ${REFERENCES.davis.length} reference blank forms`);
-  }
+  DAVIS_SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'prompts/davis-schema.json'), 'utf8'));
+  const docCount = Object.keys(DAVIS_SCHEMA.documents).length;
+  const fieldCount = Object.values(DAVIS_SCHEMA.documents)
+    .reduce((sum, doc) => sum + doc.sections.reduce((s, sec) => s + sec.fields.length, 0), 0);
+  console.log(`Loaded Davis schema: ${docCount} documents, ${fieldCount} total fields`);
 } catch (e) {
-  console.error('Reference load warning:', e.message);
+  console.error('Schema load failed:', e.message);
+  process.exit(1);
 }
+
+// Build a compact schema digest for the prompt
+function buildSchemaDigest() {
+  const firm = DAVIS_SCHEMA.firm;
+  let out = `# The Davis Financial Group — Form Schema\n\n`;
+  out += `## Firm template content (appears on EVERY form — NOT a margin note)\n`;
+  out += `- Firm name: "${firm.name}"\n`;
+  out += `- Tagline: "${firm.tagline}"\n`;
+  out += `- Sub-line: "${firm.subline}"\n`;
+  out += `- Address/footer: "${firm.address}" and "${firm.footer}"\n\n`;
+
+  for (const [docId, doc] of Object.entries(DAVIS_SCHEMA.documents)) {
+    out += `## ${docId} (${doc.pages} page${doc.pages > 1 ? 's' : ''})\n`;
+    out += `Top-right marker reads: "${doc.marker}"\n`;
+    out += `Intro line: "${doc.intro}"\n\n`;
+    for (const section of doc.sections) {
+      out += `### ${section.title}${section.conditional ? ` (only if ${section.conditional})` : ''}\n`;
+      for (const field of section.fields) {
+        let line = `- \`${field.id}\` (${field.type}`;
+        if (field.options) line += `: ${field.options.join('|')}`;
+        line += `) — ${field.label}`;
+        if (field.conditional) line += ` [conditional: ${field.conditional}]`;
+        if (field.optional) line += ` [optional]`;
+        if (field.note) line += `\n  NOTE: ${field.note}`;
+        out += line + '\n';
+      }
+      out += '\n';
+    }
+  }
+  return out;
+}
+const DAVIS_SCHEMA_DIGEST = buildSchemaDigest();
 
 // ── Rate limiting — bounded LRU with deterministic expiry ───────────────────
 const rateBuckets = new Map(); // ip -> array of timestamps
@@ -277,9 +300,13 @@ async function handleExtract(req, res, ip) {
 
   console.log(`[${new Date().toISOString()}] ${ip} extract: ${files.length} file(s), ${(total / 1024).toFixed(0)}KB, mode=${mode}`);
 
-  const prompt = PROMPTS[mode] || PROMPTS.davis;
-  const references = mode === 'davis' ? (REFERENCES.davis || []) : [];
-  const result = await callOpenRouter(files, prompt, references);
+  let prompt = PROMPTS[mode] || PROMPTS.davis;
+  if (mode === 'davis') {
+    // Prepend the schema digest so the model has precise, authoritative
+    // structure for every field. No images needed.
+    prompt = DAVIS_SCHEMA_DIGEST + '\n\n---\n\n' + prompt;
+  }
+  const result = await callOpenRouter(files, prompt, []);
 
   // Post-processing validation: sanity-check values and add flags for anything
   // that looks suspicious. The model is fast but fallible; these are cheap
@@ -539,26 +566,9 @@ function readBodyLimited(req, max) {
 }
 
 // ── OpenRouter call ─────────────────────────────────────────────────────────
-function callOpenRouter(files, prompt, references = []) {
+function callOpenRouter(files, prompt) {
   return new Promise((resolve, reject) => {
     const content = [];
-
-    // Reference blank forms come first, with a label so the model knows these
-    // are templates to compare against, not the user's upload.
-    if (references.length) {
-      content.push({
-        type: 'text',
-        text: `The next ${references.length} image${references.length > 1 ? 's are' : ' is'} BLANK reference form${references.length > 1 ? 's' : ''} from The Davis Financial Group (in order: ${references.map(r => r.label).join(', ')}). These are templates showing what clean, empty versions look like. Use them as anchors to find fields, recognize the document type, and spot anything unusual in the user's uploaded form.`
-      });
-      for (const ref of references) {
-        const dataUrl = `data:${ref.mediaType};base64,${ref.buffer.toString('base64')}`;
-        content.push({ type: 'image_url', image_url: { url: dataUrl } });
-      }
-      content.push({
-        type: 'text',
-        text: `Now here ${files.length > 1 ? 'are' : 'is'} the FILLED-IN form${files.length > 1 ? 's' : ''} from the client (${files.length} image${files.length > 1 ? 's' : ''}). Extract from these, using the blanks above as your reference:`
-      });
-    }
 
     for (const file of files) {
       const dataUrl = `data:${file.mediaType};base64,${file.buffer.toString('base64')}`;
