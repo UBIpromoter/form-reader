@@ -1135,10 +1135,19 @@ function formatValue(id, meta, value) {
       return value.map(c => {
         const name = c?.name ? escapeHtml(String(c.name)) : '(no name)';
         const age = c?.age !== undefined && c?.age !== null ? escapeHtml(String(c.age)) : '?';
-        return `<div>${name} — age ${age}</div>`;
+        const notes = c?.notes ? ` <span style="color:var(--olive-dark);font-style:italic;">— ${escapeHtml(String(c.notes))}</span>` : '';
+        return `<div>${name} — age ${age}${notes}</div>`;
       }).join('');
     }
     return '<span class="empty">—</span>';
+  }
+  // Array value for a non-children field = multi-select ambiguity
+  if (Array.isArray(value)) {
+    const labels = value.map(v => {
+      if (meta.type === 'select' && SELECT_LABELS[id]) return SELECT_LABELS[id][v] || v;
+      return v;
+    });
+    return '<span style="color:var(--amber);">⚠ Multiple: </span>' + labels.map(escapeHtml).join(', ');
   }
   return escapeHtml(String(value));
 }

@@ -21,7 +21,8 @@ If there's no handwritten answer under a question, the value is `null`. Do not s
 
 - **Read COMPLETE numbers.** Phone numbers have 10 digits plus separators (e.g. `413-555-2847`). Dates have full month/day/year. Don't return partial numbers.
 - **Names are complete words**, not single letters. If you see "Mitchell" written in cursive, return `"Mitchell"`, not `"M"` or `"F"`.
-- **Options marked with a checkmark ✓, filled circle ●, a hand-drawn circle around the text, an X, or any pen mark** — all mean that option is selected. If multiple options have marks, pick the clearest one.
+- **Options marked with a checkmark ✓, filled circle ●, a hand-drawn circle around the text, an X, or any pen mark** — all mean that option is selected.
+- **MULTIPLE OPTIONS MARKED — DO NOT GUESS.** If a question has more than one option marked, return the value as an array (e.g. `["no", "previously"]`) AND add a flag: `"Multiple options marked on <question>: <which ones>. Need human review."`. Do not silently pick one. This is important information for the advisor.
 - **Written amounts preserve the client's formatting.** `~$750K to start` stays `~$750K to start`. `$180,000` stays `$180,000`.
 - **Multi-line handwritten answers in writing boxes**: concatenate all lines into one string, preserving meaning.
 
@@ -29,12 +30,24 @@ If there's no handwritten answer under a question, the value is `null`. Do not s
 
 ## Identify the document
 
-Look at the masthead/marker (top right of each page). The form is one of:
+Compare the uploaded image to the blank reference forms shown at the start of this conversation. Match the masthead/marker (top right of each page). The expected forms are:
+
 - **Quick Start** — 1 page, basic info and "why are you here"
 - **Financial Sketch** — 3 pages (income, assets, debts, safety net, estate, values, other professionals)
 - **What to Bring** — 1 page, document checklist
 
 If pages from different documents are mixed together, group them in the output.
+
+### Bob and weave if the form doesn't match
+
+If the uploaded image does NOT match any of the reference blanks:
+
+- Set `"document": "unrecognized"`
+- Extract whatever you can identify (names, dates, phone numbers, checkboxes, handwritten text) into the `fields` object using your best guess at field IDs — OR dump everything into a single `fields.unstructured_content` field with the full text
+- Add a flag: `"This image doesn't match the expected Davis Financial blank forms. Extracted opportunistically — please review."`
+- Still include `margin_notes` and anything else useful
+
+Don't return empty fields just because the form doesn't match the template. Extract what you can see; flag what you couldn't verify.
 
 ---
 
@@ -50,9 +63,29 @@ Per field, score 0.0–1.0:
 
 ---
 
-## Capture margin notes
+## Capture EVERYTHING handwritten outside the fields
 
-If the client wrote additional notes in the margins, between fields, or anywhere else on the page that doesn't correspond to a labeled field, capture them in a `margin_notes` array at the top level. Each item: `{ "location": "<where on the page>", "text": "<what they wrote>" }`.
+Anything the client wrote that isn't an answer to a specific labeled field goes in `margin_notes`. Be generous and inclusive:
+
+- A phone number written in a corner
+- A name scribbled anywhere
+- An arrow with a comment
+- A correction, a strikethrough, a rewritten value
+- A sticky-note-style annotation between sections
+- A signature, initials, or date somewhere unexpected
+- A note in the margin pointing to a specific field (e.g. "see attached")
+- ANY text that appears on the page outside of a labeled-field answer zone
+
+Each entry: `{ "location": "<where on the page — top-right corner, beside name, margin between X and Y, etc.>", "text": "<exactly what they wrote>" }`.
+
+**If you see text and you're not sure whether it's an answer or a margin note, put it in margin_notes AND flag it.** Missing information is worse than redundant information.
+
+## Handle contextual annotations NEAR fields
+
+If the client writes extra context directly next to a field — for example, "disabled" next to a child's name, "deceased" next to a spouse, "pending divorce" next to a relationship status — capture that context:
+
+- For `children`: each child object is `{ "name": "...", "age": "...", "notes": "..." }` where `notes` captures any extra annotation near that child's name (disabilities, special needs, twins, adopted, step-, etc.). Leave `notes` as `null` if there's nothing extra.
+- For any other field where the client wrote extra context next to the answer, include it in the field's `value` OR in `margin_notes` — your call, but err on the side of preserving the information.
 
 ---
 
