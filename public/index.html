@@ -342,6 +342,9 @@
   }
   @media (max-width: 700px) {
     .compare { grid-template-columns: 1fr; }
+    /* On mobile, put extracted data FIRST — that's what the user came for */
+    .compare .panel-fields-wrap { order: 1; }
+    .compare .panel-image-wrap { order: 2; }
   }
   .compare-panel {
     background: var(--card);
@@ -351,6 +354,10 @@
     display: flex;
     flex-direction: column;
     max-height: 75vh;
+  }
+  @media (max-width: 700px) {
+    .compare-panel { max-height: none; }
+    .compare .panel-image-wrap .compare-panel { max-height: 60vh; }
   }
   .compare-header {
     padding: 10px 14px;
@@ -640,13 +647,17 @@
     <!-- Davis mode result -->
     <div id="davis-result">
       <div class="compare">
-        <div class="compare-panel">
-          <div class="compare-header">Original pages</div>
-          <div class="compare-body compare-images" id="compare-images"></div>
+        <div class="panel-fields-wrap">
+          <div class="compare-panel">
+            <div class="compare-header">What we read — tap any field to correct</div>
+            <div class="compare-body fields-panel" id="fields-panel"></div>
+          </div>
         </div>
-        <div class="compare-panel">
-          <div class="compare-header">Extracted</div>
-          <div class="compare-body fields-panel" id="fields-panel"></div>
+        <div class="panel-image-wrap">
+          <div class="compare-panel">
+            <div class="compare-header">Original pages</div>
+            <div class="compare-body compare-images" id="compare-images"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1033,15 +1044,22 @@ function showResult() {
 
   // Flags
   const flagsBar = document.getElementById('flags-bar');
+  let flagsHtml = '';
   const flags = extractionResult.flags || [];
   if (flags.length) {
-    flagsBar.innerHTML = `<div class="flags-bar">
+    flagsHtml += `<div class="flags-bar">
       <div class="flag-title">Things to check</div>
       ${flags.map(f => `⚠ ${escapeHtml(f)}`).join('<br>')}
     </div>`;
-  } else {
-    flagsBar.innerHTML = '';
   }
+  const marginNotes = extractionResult.margin_notes || [];
+  if (marginNotes.length) {
+    flagsHtml += `<div class="flags-bar" style="background:var(--olive-light);">
+      <div class="flag-title" style="color:var(--olive-dark);">Margin notes (written outside the fields)</div>
+      ${marginNotes.map(n => `<strong>${escapeHtml(n.location || 'page')}:</strong> ${escapeHtml(n.text)}`).join('<br>')}
+    </div>`;
+  }
+  flagsBar.innerHTML = flagsHtml;
 
   // Images panel
   const imagesHtml = files.map(f => {
@@ -1112,8 +1130,15 @@ function formatValue(id, meta, value) {
   if (meta.type === 'select' && SELECT_LABELS[id]) {
     return '✓ ' + escapeHtml(SELECT_LABELS[id][value] || String(value));
   }
-  if (meta.type === 'children' && Array.isArray(value)) {
-    return value.map(c => `<div>${escapeHtml(c.name)} — age ${escapeHtml(String(c.age))}</div>`).join('');
+  if (meta.type === 'children') {
+    if (Array.isArray(value) && value.length) {
+      return value.map(c => {
+        const name = c?.name ? escapeHtml(String(c.name)) : '(no name)';
+        const age = c?.age !== undefined && c?.age !== null ? escapeHtml(String(c.age)) : '?';
+        return `<div>${name} — age ${age}</div>`;
+      }).join('');
+    }
+    return '<span class="empty">—</span>';
   }
   return escapeHtml(String(value));
 }
@@ -1287,9 +1312,28 @@ function formatDavisEmail(payload) {
   for (const [section, rows] of Object.entries(bySection)) {
     out += `${section.toUpperCase()}\n`;
     for (const { meta, data } of rows) {
-      const v = data.value === null ? '—' : Array.isArray(data.value) ? data.value.map(c => `${c.name} (${c.age})`).join(', ') : data.value;
+      let v;
+      if (data.value === null || data.value === undefined) {
+        v = '—';
+      } else if (Array.isArray(data.value)) {
+        v = data.value.length
+          ? data.value.map(c => `${c?.name || '(no name)'} (age ${c?.age ?? '?'})`).join(', ')
+          : '—';
+      } else if (meta.type === 'bool') {
+        v = data.value ? '✓' : '—';
+      } else {
+        v = String(data.value);
+      }
       out += `  ${meta.label}: ${v}\n`;
     }
+    out += '\n';
+  }
+
+  if (payload.margin_notes?.length) {
+    out += 'MARGIN NOTES\n';
+    payload.margin_notes.forEach(n => {
+      out += `  [${n.location || 'page'}] ${n.text}\n`;
+    });
     out += '\n';
   }
 

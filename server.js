@@ -11,7 +11,7 @@ const Busboy = require('busboy');
 // ── Config ──────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8091;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.MODEL || 'google/gemini-2.0-flash-001';
+const MODEL = process.env.MODEL || 'google/gemini-2.5-pro';
 const KILL_SWITCH = process.env.KILL_SWITCH === 'true';
 
 // When true, trust proxy headers (cf-connecting-ip, x-forwarded-for).
